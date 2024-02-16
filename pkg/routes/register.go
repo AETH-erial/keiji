@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"adeptus-mechanicus.void/git/keiji/pkg/controller"
+	"git.aetherial.dev/aeth/keiji/pkg/controller"
 	"github.com/gin-gonic/gin"
 )
 

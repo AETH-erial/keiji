@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"adeptus-mechanicus.void/git/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
 )
 

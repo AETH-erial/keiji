@@ -3,7 +3,7 @@ package controller
 import (
 	"net/http"
 
-	"adeptus-mechanicus.void/git/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
 )
 

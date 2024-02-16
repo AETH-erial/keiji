@@ -3,7 +3,7 @@ package helpers
 import (
 	"os"
 
-	"adeptus-mechanicus.void/git/keiji/pkg/env"
+	"git.aetherial.dev/aeth/keiji/pkg/env"
 )
 
 

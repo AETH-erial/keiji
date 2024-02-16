@@ -7,12 +7,9 @@ import (
 
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"adeptus-mechanicus.void/git/keiji/docs"
-	"adeptus-mechanicus.void/git/keiji/pkg/env"
-	"adeptus-mechanicus.void/git/keiji/pkg/routes"
+	"git.aetherial.dev/aeth/keiji/pkg/env"
+	"git.aetherial.dev/aeth/keiji/pkg/routes"
 )
 
 var WEB_ROOT string
@@ -26,9 +23,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Error when loading env file: ", err)
 	}
-	docs.SwaggerInfo.Title = "Webserver Swagger documentation"
-	docs.SwaggerInfo.Host = "127.0.0.1:8080"
-	docs.SwaggerInfo.Schemes = []string{"http"}
 	renderer := multitemplate.NewRenderer()
 	renderer.AddFromFiles(
 		"home",
@@ -76,7 +70,6 @@ func main() {
 	)
 	e := gin.Default()
 	e.HTMLRender = renderer
-	e.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR)
 	e.Run(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")))
 

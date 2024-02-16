@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"adeptus-mechanicus.void/git/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 )
 
 type Controller struct{
