@@ -1,0 +1,10 @@
+# ignoring environment variable file
+*.env
+
+# everything in the build directory
+build/linux/webserver/*
+
+html/assets/images/*
+
+# db seed data
+db_seed/*
