@@ -1,0 +1,24 @@
+{{ define "upload.html" }}
+<!DOCTYPE html>
+<html lang="en">
+        <form hx-encoding='multipart/form-data' hx-post='/admin/images/upload'
+             _='on htmx:xhr:progress(loaded, total) set #progress.value to (loaded/total)*100'>
+                <div class="row container p-2 m-2">
+                    <input type='file' name='file'>
+                </div>
+                <div class="row container p-2 m-2">
+                    <textarea name="description" wrap="soft" required="required" placeholder="Name of the piece?"></textarea>
+                </div>
+                <div class="row container p-2 m-2">
+                    <textarea name="description" wrap="soft" required="required" placeholder="What would you like to say about it?"></textarea>
+                </div>
+                <div class="row container p-2 m-2">
+                    <button>
+                       Upload
+                    </button>
+                    <progress id='progress' value='0' max='100'></progress>
+                </div>
+        </form>
+</html>
+
+{{ end }}

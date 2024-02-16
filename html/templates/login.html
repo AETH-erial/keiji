@@ -1,0 +1,45 @@
+{{ define "login.html" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/api/v1/style/bootstrap.min.css">
+        <link rel="stylesheet" href="/api/v1/style/mdb/mdb.min.css">
+    </head>
+
+    <body style="background-color: rgb(56, 56, 56);">
+        <div class="container-fluid sticky-top pb-0">
+            <div class="row align-items-center justify-content-center bg-dark h-100 shadow-lg p-0 mb-0 rounded">
+                <div class="col-sm-8 p-3">
+                    <div style="color: whitesmoke; font-size: xx-large; font-family: monospace;">
+                        <a style="color:whitesmoke">{{ .heading }}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container-fluid p-5 position-relative">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm"></div>
+                    <div class="row position-relative shadow-lg p-3 m-3 rounded justify-content-center"
+                        style="width: 80vh; max-width: 95%; background-color: rgb(22, 22, 22);">
+                        <div class="col-sm" style="color: whitesmoke; font-size: xx-large; font-family: monospace;">
+                            <form method="post"
+                                hx-post="/login"
+                                hx-ext="json-enc">
+                                <input type="text" name="username" placeholder="do androids dream" required><br>
+                                <input type="password" name="password" placeholder="of electric sheep?" required><br>
+                                <button type="submit">Send</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-sm"></div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script src="https://unpkg.com/htmx.org@1.9.4"></script> 
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+</html>
+{{ end }}

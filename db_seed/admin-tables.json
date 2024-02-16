@@ -1,0 +1,43 @@
+{
+    "category": "configuration",
+    "tables": [
+        {
+            "table_name": "digital_media_management",
+            "table_data": [
+                {
+                    "display_name": "Upload a new image",
+                    "link": "/images/upload"
+                },
+                {
+                    "display_name": "Rename image filename",
+                    "link": ""
+                },
+                {
+                    "display_name": "Rename image canonical name",
+                    "link": ""
+                },
+                {
+                    "display_name": "Edit image description",
+                    "link": ""
+                },
+                {
+                    "display_name": "Delete image",
+                    "link": ""
+                }
+            ]
+        },
+        {
+            "table_name": "blog_post_management",
+            "table_data": [
+                {
+                    "display_name": "Edit a blog post",
+                    "link": "/admin/posts/all"
+                },
+                {
+                    "display_name": "Create a blog post",
+                    "link": "/admin/posts"
+                }
+            ]
+        }
+    ]
+}

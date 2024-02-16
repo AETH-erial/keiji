@@ -1,0 +1,51 @@
+{{ define "blogpost_editor.html" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/api/v1/style/bootstrap.min.css">
+        <link rel="stylesheet" href="/api/v1/style/mdb/mdb.min.css">
+    </head>
+    <body style="background-color: rgb(56, 56, 56);">
+    {{ template "navigation.html" .navigation }}
+    <div class="container-fluid p-2 position-relative" style="width: 80vw; max-width: 80%; background-color: rgb(22, 22, 22);">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm"></div>
+                    <div class="container position-relative">
+                        <div class="col m-5">
+                            <div id="response"></div>
+                            <form method={{ .HttpMethod }} hx-post="/admin/posts" hx-ext="json-enc" hx-target="#response">
+                                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                                    <a>Post Identifier:</a>
+                                    <textarea name="identifier" style="background-color: rgb(73, 73, 73); color: white;">{{ .Ident }}</textarea>
+                                </div>
+                                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                                    <a>Category:</a>
+                                    <select name="category" class="form-select" style="background-color: rgb(73, 73, 73); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                                        <option selected>{{ .DefaultTopic }}</option>
+                                        {{ range .Topics }}
+                                            <option value={{ . }}>{{ . }}</option>
+                                        {{ end }}
+                                    </select>
+                                </div>
+                                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: large; font-family: monospace;">
+                                    <a>Time of creation:</a>
+                                    <textarea name="created" style="background-color: rgb(73, 73, 73); color: white;">{{ .Created }}</textarea>
+                                </div>
+                                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                                    <a>Post Body:</a>
+                                    <textarea name="body" rows="30" wrap="soft" style="background-color: rgb(73, 73, 73); color: white;">{{ .Body }}</textarea>
+                                </div>
+                            <button type="submit">Send</button>
+                            </form>
+                        </div>
+                    </div>
+                <div class="col-sm"></div>
+            </div>
+        </div>
+    </div>
+    </body>
+</html>
+{{ end }}

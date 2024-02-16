@@ -1,0 +1,25 @@
+{
+    "category": "configuration",
+    "elements": [
+      {
+        "link": "http://adeptus-mechanicus.void:8085/git",
+        "png": "git.png"
+      },
+      {
+        "link": "https://www.linkedin.com/in/russell-hrubesky-a62237221/",
+        "png": "linkedin.png"
+      },
+      {
+        "link": "https://github.com/AETH-erial",
+        "png": "github.png"
+      },
+      {
+        "link": "https://twitter.com/Aetherial___",
+        "png": "twitter.png"
+      },
+      {
+        "link": "https://soundcloud.com/aeth-592553883",
+        "png": "soundcloud.png"
+      }
+    ]
+  }

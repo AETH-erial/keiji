@@ -1,0 +1,10 @@
+{{ define "centered_image.html" }}
+<!DOCTYPE html>
+<html lang="en">
+    <div class="row container-fluid m-0 p-0">
+        <div class="col container-fluid" style="background-color: black;"></div>
+        <img src="{{ . }}" loading="lazy" class="img-fluid m-0 p-0 col-auto" style="background-color: black; max-height: 70vh;">
+        <div class="col container-fluid" style="background-color: black;"></div>
+    </div>
+</html>
+{{ end }}
