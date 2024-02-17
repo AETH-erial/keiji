@@ -10,6 +10,7 @@ import (
 const IMAGE_STORE = "IMAGE_STORE"
 const HOST_PORT = "HOST_PORT"
 const HOST_ADDR = "HOST_ADDR"
+const SSL_MODE = "SSL_MODE"
 const CHAIN = "CHAIN"
 const KEY = "KEY"
 
@@ -19,6 +20,7 @@ var REQUIRED_VARS = []string{
 	HOST_ADDR,
 	CHAIN,
 	KEY,
+	SSL_MODE,
 
 }
 
