@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -99,6 +100,7 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 
 	err = rds.AddDoc(doc); if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
+		log.Default().Print(err, "\n")
 		return
 	}
 	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
