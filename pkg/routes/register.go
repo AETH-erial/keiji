@@ -8,6 +8,7 @@ import (
 func Register(e *gin.Engine, root string, domain string, redisPort string, redisAddr string) {
 	c := controller.NewController(root, domain, redisPort, redisAddr)
 	web := e.Group("")
+	web.GET("/", c.ServeBlogHome)
 	web.GET("/home", c.ServeHome)
 	web.GET("/blog", c.ServeBlogHome)
 	web.GET("/creative", c.ServeCreativeWriting)
