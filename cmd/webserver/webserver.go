@@ -66,8 +66,13 @@ func main() {
 		fmt.Sprintf("%s/templates/blogpost_editor.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+	)
+	renderer.AddFromFiles(
+		"upload_status",
+		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
 	)
 	e := gin.Default()
 	e.HTMLRender = renderer
