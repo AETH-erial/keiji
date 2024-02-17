@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -20,7 +19,7 @@ func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
 		"Tables": c.FormatDocTable().Tables,
 
 	})
-	
+
 }
 
 
@@ -63,20 +62,19 @@ func (c *Controller) UpdateBlogPost(ctx *gin.Context) {
 		return
 	}
 	rds := helpers.NewRedisClient(helpers.RedisConf{Addr: os.Getenv("REDIS_ADDR"), Port: os.Getenv("REDIS_PORT")})
-
 	err = rds.UpdatePost(doc.Ident, doc); if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
 	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
-	
+
 }
 
 
 
 func (c *Controller) ServeNewBlogPage(ctx *gin.Context) {
 
-	ctx.HTML(200, "blogpost_editor", gin.H{
+	ctx.HTML(200, "new_blogpost", gin.H{
 		"navigation": gin.H{
 			"menu": c.Menu(),
 			"headers": c.Headers().Elements,
@@ -97,14 +95,12 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 		return
 	}
 	rds := helpers.NewRedisClient(helpers.RedisConf{Addr: os.Getenv("REDIS_ADDR"), Port: os.Getenv("REDIS_PORT")})
-
 	err = rds.AddDoc(doc); if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
-		log.Default().Print(err, "\n")
 		return
 	}
 	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
-	
+
 }
 
 func (c *Controller) SaveFile(ctx *gin.Context) {

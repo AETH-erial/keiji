@@ -1,22 +1,19 @@
 {{ define "navigation.html" }}
-<!DOCTYPE html>
-<html lang="en">
-    <div class="container-fluid sticky-top pb-0">
-        <div class="row align-items-center justify-content-center bg-dark h-100 shadow-lg p-0 mb-0 rounded">
-            <div class="col-sm-8 p-3">
-                <div style="color: whitesmoke; font-size: xx-large; font-family: monospace;">
-                    <a href="/home" style="color:whitesmoke">aetherial.dev homepage</a>
-                </div>
+<div class="container-fluid sticky-top pb-0">
+    <div class="row align-items-center justify-content-center bg-dark h-100 shadow-lg p-0 mb-0 rounded">
+        <div class="col-sm-8 p-3">
+            <div style="color: whitesmoke; font-size: xx-large; font-family: monospace;">
+                <a href="/home" style="color:whitesmoke">aetherial.dev homepage</a>
             </div>
-            <div class="col-sm">
-                <div class="row">
-                    {{ range .headers }}
-                        {{ template "link.html" . }}
-                    {{ end }}
-                    {{ template "menu.html" .menu }}
-                </div>
+        </div>
+        <div class="col-sm">
+            <div class="row">
+                {{ range .headers }}
+                    {{ template "link.html" . }}
+                {{ end }}
+                {{ template "menu.html" .menu }}
             </div>
         </div>
     </div>
-</html>
+</div>
 {{ end }}

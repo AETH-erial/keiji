@@ -25,7 +25,7 @@ func (c *Controller) AddDocument(ctx *gin.Context) {
 		})
 		return
 	}
-	
+
 	doc := helpers.NewDocument(upload.Name, nil, upload.Text, upload.Category)
 	err = helpers.AddDocument(doc, c.RedisConfig); if err != nil {
 		ctx.JSON(400, map[string]string{
@@ -33,7 +33,7 @@ func (c *Controller) AddDocument(ctx *gin.Context) {
 		})
 		return
 	}
-	
+
 }
 
 // @Name ServeLogin

@@ -4,11 +4,11 @@
 WEBSERVER = webserver
 SEED_CMD = seed
 SWAG := $(shell command -v swag 2> /dev/null)
-
+## Have to set the WEB_ROOT and DOMAIN_NAME environment variables when building
 build:
-	go build -ldflags "-X main.WEB_ROOT=/home/aeth/keiji/html \
-	-X main.DOMAIN_NAME=aetherial.dev" \
-	-o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go 
+	go build -ldflags "-X main.WEB_ROOT=$(WEB_ROOT) \
+	-X main.DOMAIN_NAME=$(DOMAIN_NAME)" \
+	-o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go
 
 format:
 	go fmt ./...

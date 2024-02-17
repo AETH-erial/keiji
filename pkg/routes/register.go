@@ -17,7 +17,7 @@ func Register(e *gin.Engine, root string, domain string, redisPort string, redis
 	web.GET("/login", c.ServeLogin)
 	web.POST("/login", c.Auth)
 
-	
+
 	cdn := e.Group("/api/v1")
 	cdn.GET("/style/:file", c.ServeCss)
 	cdn.GET("/js/:file", c.ServeJs)
@@ -25,8 +25,8 @@ func Register(e *gin.Engine, root string, domain string, redisPort string, redis
 	cdn.GET("/assets/:file", c.ServeAsset)
 	cdn.GET("/images/:file", c.ServeImage)
 
-	
-	
+
+
 	priv := e.Group("/admin")
 	priv.Use(c.IsAuthenticated)
 	priv.GET("/panel", c.AdminPanel)

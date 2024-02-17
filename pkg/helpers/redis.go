@@ -29,6 +29,12 @@ func (d *DocDoesntExist) Error() string {
 	return fmt.Sprintf("Document with ID: '%s' does not exist.", d.Key)
 }
 
+type InvalidTopic struct {Topic string}
+
+func (i *InvalidTopic) Error() string {
+	return fmt.Sprintf("Topic: %s is not a valid topic category.", i.Topic)
+	}
+
 type RedisConf struct {
 	Addr	string
 	Port	string
@@ -58,7 +64,6 @@ retrieves all of the document IDs in the Redis database
 */
 func (r *RedisCaller) AllDocIds() ([]string, error) {
 	return r.Client.Keys(r.ctx, "*").Result()
-	
 }
 
 /*
@@ -66,13 +71,18 @@ Sets the item (id) to the value supplied in value
 	:param doc: the documents.Document struct to input to the database
 */
 func (r *RedisCaller) AddDoc(doc Document) error {
+	_, ok := TopicMap[doc.Category]
+	if !ok {
+		return &InvalidTopic{Topic: doc.Category}
+	}
+
 	val, err := r.Client.Get(r.ctx, doc.Ident).Result()
 	if err == redis.Nil {
 		data, err := json.Marshal(&doc)
 		if err != nil {
 			return err
 		}
-	
+
 		err = r.Client.Set(r.ctx, doc.Ident, data, 0).Err()
 		if err != nil {
 			return err
@@ -119,7 +129,7 @@ func (r *RedisCaller) DeleteDoc(id string) error {
     } else if err != nil {
         return err
     }
-	
+
 	err = r.Client.Del(r.ctx, id).Err()
 	if err != nil {
 		return err
@@ -144,13 +154,13 @@ func (r *RedisCaller) editVal(id string, in interface{}) error {
 		if err != nil {
 			return err
 		}
-	
+
 		err = r.Client.Set(r.ctx, id, data, 0).Err()
 		if err != nil {
 			return err
 		}
 		return nil
-    } 
+    }
 
 func (r *RedisCaller) SeedData(seedLoc string) error {
 	dirs, err := os.ReadDir(seedLoc)

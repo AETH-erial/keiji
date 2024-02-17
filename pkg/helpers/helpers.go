@@ -26,6 +26,12 @@ var Topics = []string{
 	CREATIVE,
 }
 
+var TopicMap = map[string]string{
+	TECHNICAL: TECHNICAL,
+	BLOG: BLOG,
+	CREATIVE: CREATIVE,
+}
+
 type HeaderCollection struct {
 	Category	string		`json:"category"`
 	Elements	[]HeaderElem	`json:"elements"`

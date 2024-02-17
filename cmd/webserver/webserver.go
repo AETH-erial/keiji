@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,8 @@ var DOMAIN_NAME string
 
 
 func main() {
+	ssl := flag.Bool("ssl", false, "Set this to true to run the server with ssl. Leave blank to run in plaintext.")
+	flag.Parse()
 	args := os.Args
 	err := env.LoadAndVerifyEnv(args[1], env.REQUIRED_VARS)
 	if err != nil {
@@ -60,10 +63,20 @@ func main() {
 		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/blogpost_editor.html", WEB_ROOT),
 	)
 	renderer.AddFromFiles(
 		"blogpost_editor",
 		fmt.Sprintf("%s/templates/blogpost_editor.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+	)
+	renderer.AddFromFiles(
+		"new_blogpost",
+		fmt.Sprintf("%s/templates/new_blogpost.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
@@ -77,7 +90,11 @@ func main() {
 	e := gin.Default()
 	e.HTMLRender = renderer
 	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR)
-	e.RunTLS(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
-				os.Getenv(env.CHAIN), os.Getenv(env.KEY))
+	if *ssl {
+		e.RunTLS(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
+		os.Getenv(env.CHAIN), os.Getenv(env.KEY))
+	}
+	e.Run(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")))
+
 
 }
