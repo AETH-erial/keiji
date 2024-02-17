@@ -2,6 +2,7 @@
 
 
 WEBSERVER = webserver
+SEED_CMD = seed
 SWAG := $(shell command -v swag 2> /dev/null)
 
 build:
@@ -19,6 +20,9 @@ ifndef SWAG
 	$(error "Could not find the swag binary.")
 endif
 	swag init -g ./cmd/$(WEBSERVER)/$(WEBSERVER).go
+
+build-seed-cmd:
+	go build -o ./build/linux/$(SEED_CMD)/$(SEED_CMD) ./cmd/$(SEED_CMD)/$(SEED_CMD).go
 
 dev-run:
 	go build -ldflags "-X main.WEB_ROOT=/home/aeth/keiji/html" \

@@ -3,6 +3,7 @@
 
 # everything in the build directory
 build/linux/webserver/*
+build/linux/seed/*
 
 html/assets/images/*
 

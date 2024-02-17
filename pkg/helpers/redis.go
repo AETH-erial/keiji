@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -149,6 +151,28 @@ func (r *RedisCaller) editVal(id string, in interface{}) error {
 		}
 		return nil
     } 
+
+func (r *RedisCaller) SeedData(seedLoc string) error {
+	dirs, err := os.ReadDir(seedLoc)
+	if err != nil {
+		return err
+	}
+	for i := range dirs {
+		key := strings.Split(dirs[i].Name(), ".")[0]
+		b, err := os.ReadFile(fmt.Sprintf("%s/%s", seedLoc, dirs[i].Name()))
+		if err != nil {
+			return err
+		}
+		err = r.Client.Set(r.ctx, key, b, 0).Err()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+
+
 
 
 func (r *RedisCaller) UpdatePost(id string, new Document) error {
