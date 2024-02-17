@@ -10,11 +10,15 @@ import (
 const IMAGE_STORE = "IMAGE_STORE"
 const HOST_PORT = "HOST_PORT"
 const HOST_ADDR = "HOST_ADDR"
+const CHAIN = "CHAIN"
+const KEY = "KEY"
 
 var REQUIRED_VARS = []string{
 	IMAGE_STORE,
 	HOST_PORT,
 	HOST_ADDR,
+	CHAIN,
+	KEY,
 
 }
 

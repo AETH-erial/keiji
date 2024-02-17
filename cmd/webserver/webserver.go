@@ -14,8 +14,7 @@ import (
 
 var WEB_ROOT string
 var DOMAIN_NAME string
-var REDIS_PORT string
-var REDIS_ADDR string
+
 
 func main() {
 	args := os.Args
@@ -23,6 +22,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Error when loading env file: ", err)
 	}
+	REDIS_PORT := os.Getenv("REDIS_PORT")
+	REDIS_ADDR := os.Getenv("REDIS_ADDR")
 	renderer := multitemplate.NewRenderer()
 	renderer.AddFromFiles(
 		"home",
@@ -71,6 +72,7 @@ func main() {
 	e := gin.Default()
 	e.HTMLRender = renderer
 	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR)
-	e.Run(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")))
+	e.RunTLS(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
+				os.Getenv(env.CHAIN), os.Getenv(env.KEY))
 
 }
