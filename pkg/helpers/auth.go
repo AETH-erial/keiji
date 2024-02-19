@@ -43,11 +43,7 @@ func (c *AllCache) update(id string, cookie string) {
 
 func (c *AllCache) Read(id string) bool {
     _, ok := c.AuthCookies.Get(id)
-    if ok {
-
-        return true
-    }
-    return false
+	return ok
 }
 
 

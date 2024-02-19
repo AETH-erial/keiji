@@ -86,7 +86,6 @@ func (c *Controller) SaveImage(img *helpers.ImageStoreItem) error {
 }
 
 
-
 func NewController(root string, domain string, redisPort string, redisAddr string) *Controller {
 	return &Controller{WebRoot: root, Cache: helpers.NewCache(),
 								Domain: domain, RedisConfig: helpers.RedisConf{

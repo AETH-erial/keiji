@@ -137,7 +137,8 @@ func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
 // @Tags webpages
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
-	fnames, err := helpers.GetImagePaths(4, 0)
+	rds := helpers.NewRedisClient(c.RedisConfig)
+	fnames, err := helpers.GetImageData(rds)
 	if err != nil {
 		ctx.HTML(http.StatusInternalServerError, "unhandled_error",
 		gin.H{

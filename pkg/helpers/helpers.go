@@ -2,8 +2,7 @@ package helpers
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
+
 	"strings"
 	"time"
 
@@ -203,23 +202,19 @@ Retrieve all documents from the category specified in the argument category
 */
 func GetAllDocuments(category string, redisCfg RedisConf) ([]*Document, error) {
 	rdc := NewRedisClient(redisCfg)
-	fmt.Fprintf(os.Stdout, "%+v\n", redisCfg)
 	ids, err := rdc.AllDocIds()
 	if err != nil {
-		fmt.Fprint(os.Stdout, "failed 1")
 		return nil, err
 	}
 	var docs []*Document
 	for idx := range ids {
 		doc, err := rdc.GetItem(ids[idx])
 		if err != nil {
-			fmt.Fprint(os.Stdout, "failed 2")
 			return nil, err
 		}
 		if doc.Category != category {
 			continue
 		}
-		
 		docs = append(docs, &Document{
 			Ident: doc.Ident,
 			Created: doc.Created,

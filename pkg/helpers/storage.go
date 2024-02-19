@@ -1,12 +1,14 @@
 package helpers
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 type InvalidSkipArg struct {Skip int}
@@ -24,6 +26,7 @@ type ImageStoreItem struct {
 	Created			string	`json:"created"`
 	Desc			string	`json:"description" form:"description"`
 	Category		string	`json:"category"`
+	ApiPath			string
 }
 
 /*
@@ -56,25 +59,32 @@ func GetImageStore() string {
 }
 
 /*
-Return all of the filenames of the images that exist in the imagestore location
-	:param limit: the limit of filenames to return
-	:param skip: the index to start getting images from
+Return database entries of the images that exist in the imagestore
+	:param rds: pointer to a RedisCaller to perform the lookups with
 */
-func GetImagePaths(limit int, skip int) ([]string, error) {
-	f, err := os.ReadDir(GetImageStore())
+func GetImageData(rds *RedisCaller) ([]*ImageStoreItem, error) {
+	ids, err := rds.GetByCategory(DIGITAL_ART)
 	if err != nil {
 		return nil, err
 	}
-	if len(f) < skip {
-		return nil, &InvalidSkipArg{Skip: skip}
+
+	var imageEntries []*ImageStoreItem
+	for i := range ids {
+		val, err := rds.Client.Get(rds.ctx, ids[i]).Result()
+		if err == redis.Nil {
+			return nil, err
+		} else if err != nil {
+			return nil, err
+		}
+		data := []byte(val)
+		var imageEntry ImageStoreItem
+		err = json.Unmarshal(data, &imageEntry)
+		if err != nil {
+			return nil, err
+		}
+		imageEntry.ApiPath = fmt.Sprintf("/api/v1/images/%s", imageEntry.Filename)
+		imageEntries = append(imageEntries, &imageEntry)
 	}
-	if len(f) < limit {
-		return nil, &InvalidSkipArg{Skip: limit}
-	}
-	fnames := []string{}
-	for i := skip; i < (skip + limit); i++ {
-		fnames = append(fnames, fmt.Sprintf("/api/v1/images/%s", f[i].Name()))
-	}
-	return fnames, err
+	return imageEntries, err
 }
 

@@ -140,6 +140,30 @@ func (r *RedisCaller) GetItem(id string) (*Document, error) {
 }
 
 /*
+Retrieve all redis items by category. Returns all the IDs of items that belong to that category
+	:param category: the category to filter by
+*/
+func (r *RedisCaller) GetByCategory(category string) ([]string, error) {
+	ids, err := r.AllDocIds()
+	if err != nil {
+		return nil, err
+	}
+	var matches []string
+	for i := range ids {
+		item, err := r.GetItem(ids[i])
+		if err != nil {
+			return nil, err
+		}
+		if item.Category == category {
+			matches = append(matches, ids[i])
+		}
+
+	}
+	return matches, nil
+}
+
+
+/*
 Delete the target document in redis
 	:param id: the id to delete from redis
 */
