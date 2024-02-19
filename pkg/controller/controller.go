@@ -14,6 +14,9 @@ type Controller struct{
 	Cache		*helpers.AllCache
 }
 
+/*
+Retrieve the header configuration from redis
+*/
 func (c *Controller) Headers() *helpers.HeaderCollection {
 	headers, err := helpers.GetHeaders(c.RedisConfig)
 	if err != nil {
@@ -22,6 +25,9 @@ func (c *Controller) Headers() *helpers.HeaderCollection {
 	return headers
 }
 
+/*
+Retrieve the menu configuration from redis
+*/
 func (c *Controller) Menu() *helpers.MenuElement {
 	links, err := helpers.GetMenuLinks(c.RedisConfig)
 	if err != nil {
@@ -30,6 +36,9 @@ func (c *Controller) Menu() *helpers.MenuElement {
 	return links
 }
 
+/*
+Retrieve the administrator table configuration from redis
+*/
 func (c *Controller) AdminTables() *helpers.AdminTables {
 	tables, err := helpers.GetAdminTables(c.RedisConfig)
 	if err != nil {
@@ -38,6 +47,10 @@ func (c *Controller) AdminTables() *helpers.AdminTables {
 	return tables
 }
 
+
+/*
+Retrieve the post data and format it for the post management page
+*/
 func (c *Controller) FormatDocTable() *helpers.AdminTables {
 	var postTables helpers.AdminTables
 	for i := range helpers.Topics {
@@ -58,6 +71,21 @@ func (c *Controller) FormatDocTable() *helpers.AdminTables {
 	return &postTables
 
 }
+
+
+/*
+Save a new image store item
+*/
+func (c *Controller) SaveImage(img *helpers.ImageStoreItem) error {
+	rds := helpers.NewRedisClient(c.RedisConfig)
+	err := rds.AddImage(img)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+
 
 func NewController(root string, domain string, redisPort string, redisAddr string) *Controller {
 	return &Controller{WebRoot: root, Cache: helpers.NewCache(),

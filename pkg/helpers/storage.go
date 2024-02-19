@@ -3,15 +3,43 @@ package helpers
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
+	"github.com/google/uuid"
 )
 
 type InvalidSkipArg struct {Skip int}
 
 func (i *InvalidSkipArg) Error() string {
-	return fmt.Sprintf("Invalid skip amount was passed: %s", i.Skip)
+	return fmt.Sprintf("Invalid skip amount was passed: %v", i.Skip)
 }
+
+
+type ImageStoreItem struct {
+	Identifier		string	`json:"identifier"`
+	Filename		string	`json:"filename"`
+	AbsolutePath	string	`json:"absolute_path"`
+	Title			string	`json:"title"`
+	Created			string	`json:"created"`
+	Desc			string	`json:"description"`
+	Category		string	`json:"category"`
+}
+
+func NewImageStoreItem(fname string, title string, desc string) *ImageStoreItem {
+	id := uuid.New()
+	img := ImageStoreItem{
+		Identifier: id.String(),
+		Filename: fname,
+		Title: title,
+		Category: DIGITAL_ART,
+		AbsolutePath: fmt.Sprintf("%s/%s", env.IMAGE_STORE, fname),
+		Created: time.Now().UTC().String(),
+		Desc: desc,
+	}
+	return &img
+}
+
 
 /*
 Function to return the location of the image store. Wrapping the env call in

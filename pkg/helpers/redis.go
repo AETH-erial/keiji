@@ -92,8 +92,29 @@ func (r *RedisCaller) AddDoc(doc Document) error {
         return err
     }
 	return &DocAlreadyExists{Key: doc.Ident, Value: val}
+}
 
 
+/*
+Add an image to the image store
+	:param img: an ImageStoreItem struct with the appropriate metadata
+*/
+func (r *RedisCaller) AddImage(img *ImageStoreItem) error {
+	val, err := r.Client.Get(r.ctx, img.Identifier).Result()
+	if err == redis.Nil {
+		data, err := json.Marshal(img)
+		if err != nil {
+			return err
+		}
+		err = r.Client.Set(r.ctx, img.Identifier, data, 0).Err()
+		if err != nil {
+			return err
+		}
+		return nil
+    } else if err != nil {
+        return err
+    }
+	return &DocAlreadyExists{Key: img.Identifier, Value: val}
 }
 
 

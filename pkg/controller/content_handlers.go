@@ -24,7 +24,7 @@ func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
 
 
 func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
-	rds := helpers.NewRedisClient(helpers.RedisConf{Addr: os.Getenv("REDIS_ADDR"), Port: os.Getenv("REDIS_PORT")})
+	rds := helpers.NewRedisClient(c.RedisConfig)
 	post, exist := ctx.Params.Get("post-name")
 	if !exist {
 		ctx.JSON(404, map[string]string{
@@ -116,12 +116,18 @@ func (c *Controller) ServeFileUpload(ctx *gin.Context) {
 
 
 func (c *Controller) SaveFile(ctx *gin.Context) {
-	file, _ := ctx.FormFile("file")
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	//rds := helpers.NewRedisClient(c.RedisConfig)
+
 
 	// Upload the file to specific dst.
-	err := ctx.SaveUploadedFile(file, fmt.Sprintf("%s/%s", helpers.GetImageStore(), file.Filename))
+	err = ctx.SaveUploadedFile(file, fmt.Sprintf("%s/%s", helpers.GetImageStore(), file.Filename))
 	if err != nil {
-		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
 
