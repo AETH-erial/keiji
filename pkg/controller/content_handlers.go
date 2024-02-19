@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -121,11 +120,20 @@ func (c *Controller) SaveFile(ctx *gin.Context) {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
-	//rds := helpers.NewRedisClient(c.RedisConfig)
+	var img helpers.ImageStoreItem
+	err = ctx.ShouldBind(&img); if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	savedImg := helpers.NewImageStoreItem(file.Filename, img.Title, img.Desc)
+	err = c.SaveImage(savedImg); if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
 
 
 	// Upload the file to specific dst.
-	err = ctx.SaveUploadedFile(file, fmt.Sprintf("%s/%s", helpers.GetImageStore(), file.Filename))
+	err = ctx.SaveUploadedFile(file, savedImg.AbsolutePath)
 	if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return

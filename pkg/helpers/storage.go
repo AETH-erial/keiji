@@ -20,12 +20,18 @@ type ImageStoreItem struct {
 	Identifier		string	`json:"identifier"`
 	Filename		string	`json:"filename"`
 	AbsolutePath	string	`json:"absolute_path"`
-	Title			string	`json:"title"`
+	Title			string	`json:"title" form:"title"`
 	Created			string	`json:"created"`
-	Desc			string	`json:"description"`
+	Desc			string	`json:"description" form:"description"`
 	Category		string	`json:"category"`
 }
 
+/*
+Create a new ImageStoreItem
+	:param fname: the name of the file to be saved
+	:param title: the canonical title to give the image
+	:param desc: the description to associate to the image
+*/
 func NewImageStoreItem(fname string, title string, desc string) *ImageStoreItem {
 	id := uuid.New()
 	img := ImageStoreItem{
@@ -33,7 +39,7 @@ func NewImageStoreItem(fname string, title string, desc string) *ImageStoreItem 
 		Filename: fname,
 		Title: title,
 		Category: DIGITAL_ART,
-		AbsolutePath: fmt.Sprintf("%s/%s", env.IMAGE_STORE, fname),
+		AbsolutePath: fmt.Sprintf("%s/%s", GetImageStore(), fname),
 		Created: time.Now().UTC().String(),
 		Desc: desc,
 	}
