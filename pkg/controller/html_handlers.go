@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
@@ -138,15 +137,21 @@ func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
 // @Tags webpages
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
+	fnames, err := helpers.GetImagePaths(4, 0)
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "unhandled_error",
+		gin.H{
+			"StatusCode": http.StatusInternalServerError,
+			"Reason": err.Error(),
+		},
+	)
+	return
+	}
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
 			"menu": c.Menu(),
 			"headers": c.Headers().Elements,
 		},
-		"images": []string{
-			fmt.Sprintf("/api/v1/images/%s", "keepoff_small.jpg"),
-			fmt.Sprintf("/api/v1/images/%s", "someoneatthedoor_small.jpg"),
-			fmt.Sprintf("/api/v1/images/%s", "whyhere.gif"),
-		},
+		"images": fnames,
 	})
 }

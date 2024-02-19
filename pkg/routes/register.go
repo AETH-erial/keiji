@@ -30,6 +30,8 @@ func Register(e *gin.Engine, root string, domain string, redisPort string, redis
 
 	priv := e.Group("/admin")
 	priv.Use(c.IsAuthenticated)
+	priv.GET("/upload", c.ServeFileUpload)
+	priv.POST("/upload", c.SaveFile)
 	priv.GET("/panel", c.AdminPanel)
 	priv.POST("/add-document", c.AddDocument)
 	priv.POST("/images/upload", c.SaveFile)

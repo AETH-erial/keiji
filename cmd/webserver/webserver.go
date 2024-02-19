@@ -84,6 +84,22 @@ func main() {
 		"upload_status",
 		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
 	)
+	renderer.AddFromFiles(
+		"unhandled_error",
+		fmt.Sprintf("%s/templates/unhandled_error.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+	)
+	renderer.AddFromFiles(
+		"upload",
+		fmt.Sprintf("%s/templates/upload.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+	)
 	e := gin.Default()
 	e.HTMLRender = renderer
 	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR)

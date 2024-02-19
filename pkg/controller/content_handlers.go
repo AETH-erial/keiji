@@ -103,17 +103,27 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 
 }
 
+
+func (c *Controller) ServeFileUpload(ctx *gin.Context) {
+	ctx.HTML(200, "upload", gin.H{
+		"navigation": gin.H{
+			"menu": c.Menu(),
+			"headers": c.Headers().Elements,
+		},
+	})
+}
+
+
+
 func (c *Controller) SaveFile(ctx *gin.Context) {
 	file, _ := ctx.FormFile("file")
 
 	// Upload the file to specific dst.
 	err := ctx.SaveUploadedFile(file, fmt.Sprintf("%s/%s", helpers.GetImageStore(), file.Filename))
 	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
 
-	ctx.HTML(200, "upload", nil)
+	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
 }
