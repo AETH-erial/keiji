@@ -2,8 +2,9 @@ package controller
 
 import (
 	"fmt"
-	"strings"
 	"os"
+	"path"
+	"strings"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -81,7 +82,6 @@ func (c *Controller) ServeMdbCss(ctx *gin.Context) {
 
 }
 
-
 // @Name ServeHtmx
 // @Summary serves some htmx assets
 // @Tags cdn
@@ -105,7 +105,6 @@ func (c *Controller) ServeHtmx(ctx *gin.Context) {
 	ctx.Data(200, "text/javascript", b)
 
 }
-
 
 // @Name ServeAsset
 // @Summary serves assets to put in a webpage
@@ -154,7 +153,7 @@ func (c *Controller) ServeImage(ctx *gin.Context) {
 // @Name ServeGeneric
 // @Summary serves file from the html file
 // @Tags cdn
-// @Router /cdn/{file} [get]
+// @Router /api/v1/cdn/{file} [get]
 func (c *Controller) ServeGeneric(ctx *gin.Context) {
 	f, exist := ctx.Params.Get("file")
 	if !exist {
@@ -175,7 +174,7 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 	default:
 		ctype = "text"
 	}
-	b, err := os.ReadFile(f)
+	b, err := os.ReadFile(path.Join(c.WebRoot, f))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": "Could not serve the requested file",
@@ -185,4 +184,3 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 	}
 	ctx.Data(200, ctype, b)
 }
-

@@ -6,9 +6,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/api/v1/style/bootstrap.min.css">
         <link rel="stylesheet" href="/api/v1/style/mdb/mdb.min.css">
-        <link rel="stylesheet" href="/api/v1/style/custom.css">
+        <link rel="stylesheet" href="/api/v1/cdn/custom.css">
     </head>
+
     <body style="background-color: rgb(56, 56, 56);">
+    <div id="main">
+
         {{ template "navigation.html" .navigation }}
         <div class="container-fluid row">
         {{ range .listings }}
@@ -22,23 +25,16 @@
 
         <div id="mySidenav" class="sidenav">
             <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
-            <a href="#">About</a>
-            <a href="#">Services</a>
-            <a href="#">Clients</a>
-            <a href="#">Contact</a>
+            {{ range .menu.MenuLinks }}
+                <a href="{{ .MenuLink }}" style="font-family: monospace;">{{ .LinkText }}</a>
+            {{ end }}
           </div>
-          <!-- Use any element to open the sidenav -->
-          <span onclick="openNav()">open</span>
-
-          <!-- Add all page content inside this div if you want the side nav to push page content to the right (not used if you only want the sidenav to sit on top of the page -->
-          <div id="main">
-            ...
-          </div>
+        </div>
 
 
 
         <script type="text/javascript" src="/api/v1/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-        <script src="/api/v1/js/slide.js"></script>
+        <script src="/api/v1/cdn/slide.js"></script>
         <script src="/api/v1/htmx/htmx.min.js"></script>
         <script src="/api/v1/htmx/json-enc.js"></script>
     </body>
