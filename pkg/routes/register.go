@@ -25,11 +25,14 @@ func Register(e *gin.Engine, root string, domain string, redisPort string, redis
 	cdn.GET("/style/mdb/:file", c.ServeMdbCss)
 	cdn.GET("/assets/:file", c.ServeAsset)
 	cdn.GET("/images/:file", c.ServeImage)
-	cdn.GET("/cdn/:file", c.ServeGeneric)
+	cdn.GET("/cdn/:file", c.ServeGeneric)	cdn.GET("/htmx/:file", c.ServeHtmx)
+
 
 
 	priv := e.Group("/admin")
 	priv.Use(c.IsAuthenticated)
+	priv.GET("/upload", c.ServeFileUpload)
+	priv.POST("/upload", c.SaveFile)
 	priv.GET("/panel", c.AdminPanel)
 	priv.POST("/add-document", c.AddDocument)
 	priv.POST("/images/upload", c.SaveFile)

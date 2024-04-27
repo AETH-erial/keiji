@@ -80,6 +80,32 @@ func (c *Controller) ServeMdbCss(ctx *gin.Context) {
 
 }
 
+
+// @Name ServeHtmx
+// @Summary serves some htmx assets
+// @Tags cdn
+// @Param file path string true "The JS file to serve to the client"
+// @Router /api/v1/htmx/{file} [get]
+func (c *Controller) ServeHtmx(ctx *gin.Context) {
+	f, exist := ctx.Params.Get("file")
+	if !exist {
+		ctx.JSON(404, map[string]string{
+			"Error": "the requested file could not be found",
+		})
+	}
+	css := fmt.Sprintf("%s/htmx/%s", c.WebRoot, f)
+	b, err := os.ReadFile(css)
+	if err != nil {
+		ctx.JSON(500, map[string]string{
+			"Error": "Could not serve the requested file",
+			"msg":   err.Error(),
+		})
+	}
+	ctx.Data(200, "text/javascript", b)
+
+}
+
+
 // @Name ServeAsset
 // @Summary serves assets to put in a webpage
 // @Tags cdn

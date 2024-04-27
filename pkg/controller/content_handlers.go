@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -24,7 +23,7 @@ func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
 
 
 func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
-	rds := helpers.NewRedisClient(helpers.RedisConf{Addr: os.Getenv("REDIS_ADDR"), Port: os.Getenv("REDIS_PORT")})
+	rds := helpers.NewRedisClient(c.RedisConfig)
 	post, exist := ctx.Params.Get("post-name")
 	if !exist {
 		ctx.JSON(404, map[string]string{
@@ -103,17 +102,42 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 
 }
 
-func (c *Controller) SaveFile(ctx *gin.Context) {
-	file, _ := ctx.FormFile("file")
 
-	// Upload the file to specific dst.
-	err := ctx.SaveUploadedFile(file, fmt.Sprintf("%s/%s", helpers.GetImageStore(), file.Filename))
+func (c *Controller) ServeFileUpload(ctx *gin.Context) {
+	ctx.HTML(200, "upload", gin.H{
+		"navigation": gin.H{
+			"menu": c.Menu(),
+			"headers": c.Headers().Elements,
+		},
+	})
+}
+
+
+
+func (c *Controller) SaveFile(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
 	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	var img helpers.ImageStoreItem
+	err = ctx.ShouldBind(&img); if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	savedImg := helpers.NewImageStoreItem(file.Filename, img.Title, img.Desc)
+	err = c.SaveImage(savedImg); if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
 
-	ctx.HTML(200, "upload", nil)
+
+	// Upload the file to specific dst.
+	err = ctx.SaveUploadedFile(file, savedImg.AbsolutePath)
+	if err != nil {
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+
+	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
 }

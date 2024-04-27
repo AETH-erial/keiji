@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
@@ -34,14 +34,13 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "blogpost", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
-		"title": doc.Ident,
-		"Ident": doc.Ident,
+		"title":   doc.Ident,
+		"Ident":   doc.Ident,
 		"Created": doc.Created,
-		"Body": doc.Body,
-
+		"Body":    template.HTML(helpers.MdToHTML([]byte(doc.Body))),
 	})
 
 }
@@ -60,13 +59,12 @@ func (c *Controller) ServeBlogHome(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
 	})
 }
-
 
 // @Name ServeHtml
 // @Summary serves HTML files out of the HTML directory
@@ -82,7 +80,7 @@ func (c *Controller) ServeHome(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
@@ -103,7 +101,7 @@ func (c *Controller) ServeCreativeWriting(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
@@ -125,7 +123,7 @@ func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
@@ -138,15 +136,22 @@ func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
 // @Tags webpages
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
+	rds := helpers.NewRedisClient(c.RedisConfig)
+	fnames, err := helpers.GetImageData(rds)
+	if err != nil {
+		ctx.HTML(http.StatusInternalServerError, "unhandled_error",
+			gin.H{
+				"StatusCode": http.StatusInternalServerError,
+				"Reason":     err.Error(),
+			},
+		)
+		return
+	}
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
-		"images": []string{
-			fmt.Sprintf("/api/v1/images/%s", "keepoff_small.jpg"),
-			fmt.Sprintf("/api/v1/images/%s", "someoneatthedoor_small.jpg"),
-			fmt.Sprintf("/api/v1/images/%s", "whyhere.gif"),
-		},
+		"images": fnames,
 	})
 }

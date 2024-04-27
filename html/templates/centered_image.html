@@ -3,8 +3,24 @@
 <html lang="en">
     <div class="row container-fluid m-0 p-0">
         <div class="col container-fluid" style="background-color: black;"></div>
-        <img src="{{ . }}" loading="lazy" class="img-fluid m-0 p-0 col-auto" style="background-color: black; max-height: 70vh;">
+        <img src="{{ .ApiPath }}" loading="lazy" class="img-fluid m-0 p-0 col-auto" style="background-color: black; max-height: 70vh;">
         <div class="col container-fluid" style="background-color: black;"></div>
     </div>
+    <a href="#">
+        <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)">
+            <div class="row align-items-center" style="font-family: monospace; color: white; min-height: 100%;">
+                <div class="col"></div>
+                <div class="col-auto">
+                    <div class="row col-auto p-2 m-2" style="font-size: xx-large;">
+                        '{{ .Title }}'
+                    </div>
+                    <div class="row col-auto p-2 m-2" style="font-size: x-large;">
+                        {{ .Desc }}
+                    </div>
+                </div>
+                <div class="col"></div>
+            </div>
+        </div>
+    </a>
 </html>
 {{ end }}
