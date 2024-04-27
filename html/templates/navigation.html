@@ -8,10 +8,22 @@
         </div>
         <div class="col-sm">
             <div class="row">
+
                 {{ range .headers }}
                     {{ template "link.html" . }}
                 {{ end }}
-                {{ template "menu.html" .menu }}
+                <div class="col-2">
+                    <div class="bg-image hover-overlay shadow-1-strong d-inline-flex p-0"
+                            id="dropdownMenuButton" data-bs-toggle="dropdown"
+                            data-mdb-ripple-init
+                            data-mdb-ripple-color="light">
+                            <span onclick="openNav()">
+                            <img src="/api/v1/assets/menu.png" style="max-height: 5vh;"/>
+                                <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)"></div>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

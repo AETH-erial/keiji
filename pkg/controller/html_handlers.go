@@ -34,13 +34,13 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "blogpost", gin.H{
 		"navigation": gin.H{
-			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"title":   doc.Ident,
 		"Ident":   doc.Ident,
 		"Created": doc.Created,
 		"Body":    template.HTML(helpers.MdToHTML([]byte(doc.Body))),
+		"menu":    c.Menu(),
 	})
 
 }
@@ -59,10 +59,10 @@ func (c *Controller) ServeBlogHome(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
+		"menu":    c.Menu(),
 	})
 }
 
@@ -80,9 +80,9 @@ func (c *Controller) ServeHome(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
+		"menu":    c.Menu(),
 		"listings": docs,
 	})
 }
@@ -101,10 +101,10 @@ func (c *Controller) ServeCreativeWriting(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
+		"menu":    c.Menu(),
 	})
 
 }
@@ -123,10 +123,10 @@ func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"listings": docs,
+		"menu":    c.Menu(),
 	})
 
 }
@@ -149,9 +149,9 @@ func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
-			"menu":    c.Menu(),
 			"headers": c.Headers().Elements,
 		},
 		"images": fnames,
+		"menu":    c.Menu(),
 	})
 }

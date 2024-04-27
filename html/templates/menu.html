@@ -6,14 +6,12 @@
                 id="dropdownMenuButton" data-bs-toggle="dropdown"
                 data-mdb-ripple-init
                 data-mdb-ripple-color="light">
-            <img src="/api/v1/assets/{{ .Png }}" style="max-height: 5vh;"/>
+                <span onclick="openNav()">
+                <img src="/api/v1/assets/menu.png" style="max-height: 5vh;"/>
                     <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)"></div>
+                </span>
             </div>
-            <div class="dropdown-menu dropdown-menu-dark" aria-labelledby="dropdownMenuButton">
-                {{ range .MenuLinks }}
-                    <a class="dropdown-item" style="font-family: monospace; font-weight: bolder;" href="{{ .MenuLink }}">{{ .LinkText }}</a>
-                {{ end }}
-            </div>
+
         </div>
     </div>
 </html>
