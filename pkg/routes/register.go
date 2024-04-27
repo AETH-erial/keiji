@@ -25,7 +25,7 @@ func Register(e *gin.Engine, root string, domain string, redisPort string, redis
 	cdn.GET("/style/mdb/:file", c.ServeMdbCss)
 	cdn.GET("/assets/:file", c.ServeAsset)
 	cdn.GET("/images/:file", c.ServeImage)
-
+	cdn.GET("/cdn/:file", c.ServeGeneric)
 
 
 	priv := e.Group("/admin")
