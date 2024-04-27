@@ -19,15 +19,16 @@ func (c *Controller) AddDocument(ctx *gin.Context) {
 
 	var upload helpers.DocumentUpload
 
-	err := ctx.BindJSON(&upload); if err != nil {
+	err := ctx.BindJSON(&upload)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
 		return
 	}
-
-	doc := helpers.NewDocument(upload.Name, nil, upload.Text, upload.Category)
-	err = helpers.AddDocument(doc, c.RedisConfig); if err != nil {
+	newPost := helpers.NewDocument(upload.Name, nil, upload.Text, upload.Category)
+	err = helpers.AddDocument(newPost, c.RedisConfig)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
@@ -60,7 +61,8 @@ func (c *Controller) Auth(ctx *gin.Context) {
 
 	var cred helpers.Credentials
 
-	err := ctx.ShouldBind(&cred); if err != nil {
+	err := ctx.ShouldBind(&cred)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
@@ -78,7 +80,6 @@ func (c *Controller) Auth(ctx *gin.Context) {
 
 }
 
-
 // @Name AdminPanel
 // @Summary serve the admin panel page
 // @Tags admin
@@ -88,7 +89,7 @@ func (c *Controller) AdminPanel(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "admin", gin.H{
 		"navigation": gin.H{
 			"headers": c.Headers().Elements,
-			"menu": c.Menu(),
+			"menu":    c.Menu(),
 		},
 		"Tables": c.AdminTables().Tables,
 	})

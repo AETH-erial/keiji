@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 	"os"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
@@ -80,6 +81,32 @@ func (c *Controller) ServeMdbCss(ctx *gin.Context) {
 
 }
 
+
+// @Name ServeHtmx
+// @Summary serves some htmx assets
+// @Tags cdn
+// @Param file path string true "The JS file to serve to the client"
+// @Router /api/v1/htmx/{file} [get]
+func (c *Controller) ServeHtmx(ctx *gin.Context) {
+	f, exist := ctx.Params.Get("file")
+	if !exist {
+		ctx.JSON(404, map[string]string{
+			"Error": "the requested file could not be found",
+		})
+	}
+	css := fmt.Sprintf("%s/htmx/%s", c.WebRoot, f)
+	b, err := os.ReadFile(css)
+	if err != nil {
+		ctx.JSON(500, map[string]string{
+			"Error": "Could not serve the requested file",
+			"msg":   err.Error(),
+		})
+	}
+	ctx.Data(200, "text/javascript", b)
+
+}
+
+
 // @Name ServeAsset
 // @Summary serves assets to put in a webpage
 // @Tags cdn
@@ -122,5 +149,40 @@ func (c *Controller) ServeImage(ctx *gin.Context) {
 		})
 	}
 	ctx.Data(200, "image/jpeg", b)
+}
+
+// @Name ServeGeneric
+// @Summary serves file from the html file
+// @Tags cdn
+// @Router /cdn/{file} [get]
+func (c *Controller) ServeGeneric(ctx *gin.Context) {
+	f, exist := ctx.Params.Get("file")
+	if !exist {
+		ctx.JSON(404, map[string]string{
+			"Error": "the requested file could not be found",
+		})
+		return
+	}
+	fext := strings.Split(f, ".")[len(strings.Split(f, "."))-1]
+	var ctype string
+	switch {
+	case fext == "css":
+		ctype = "text/css"
+	case fext == "js":
+		ctype = "text/javascript"
+	case fext == "json":
+		ctype = "application/json"
+	default:
+		ctype = "text"
+	}
+	b, err := os.ReadFile(f)
+	if err != nil {
+		ctx.JSON(500, map[string]string{
+			"Error": "Could not serve the requested file",
+			"msg":   err.Error(),
+		})
+		return
+	}
+	ctx.Data(200, ctype, b)
 }
 

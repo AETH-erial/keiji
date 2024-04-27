@@ -92,8 +92,29 @@ func (r *RedisCaller) AddDoc(doc Document) error {
         return err
     }
 	return &DocAlreadyExists{Key: doc.Ident, Value: val}
+}
 
 
+/*
+Add an image to the image store
+	:param img: an ImageStoreItem struct with the appropriate metadata
+*/
+func (r *RedisCaller) AddImage(img *ImageStoreItem) error {
+	val, err := r.Client.Get(r.ctx, img.Identifier).Result()
+	if err == redis.Nil {
+		data, err := json.Marshal(img)
+		if err != nil {
+			return err
+		}
+		err = r.Client.Set(r.ctx, img.Identifier, data, 0).Err()
+		if err != nil {
+			return err
+		}
+		return nil
+    } else if err != nil {
+        return err
+    }
+	return &DocAlreadyExists{Key: img.Identifier, Value: val}
 }
 
 
@@ -117,6 +138,30 @@ func (r *RedisCaller) GetItem(id string) (*Document, error) {
 	}
 	return &doc, nil
 }
+
+/*
+Retrieve all redis items by category. Returns all the IDs of items that belong to that category
+	:param category: the category to filter by
+*/
+func (r *RedisCaller) GetByCategory(category string) ([]string, error) {
+	ids, err := r.AllDocIds()
+	if err != nil {
+		return nil, err
+	}
+	var matches []string
+	for i := range ids {
+		item, err := r.GetItem(ids[i])
+		if err != nil {
+			return nil, err
+		}
+		if item.Category == category {
+			matches = append(matches, ids[i])
+		}
+
+	}
+	return matches, nil
+}
+
 
 /*
 Delete the target document in redis

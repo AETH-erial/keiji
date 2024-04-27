@@ -2,11 +2,13 @@ package helpers
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
+
 	"strings"
 	"time"
 
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -28,83 +30,81 @@ var Topics = []string{
 
 var TopicMap = map[string]string{
 	TECHNICAL: TECHNICAL,
-	BLOG: BLOG,
-	CREATIVE: CREATIVE,
+	BLOG:      BLOG,
+	CREATIVE:  CREATIVE,
 }
 
 type HeaderCollection struct {
-	Category	string		`json:"category"`
-	Elements	[]HeaderElem	`json:"elements"`
+	Category string       `json:"category"`
+	Elements []HeaderElem `json:"elements"`
 }
 
 type HeaderElem struct {
-	Png		string	`json:"png"`
-	Link	string	`json:"link"`
+	Png  string `json:"png"`
+	Link string `json:"link"`
 }
 
 type ImageElement struct {
-	ImgUrl	string	`json:"img_url"`
+	ImgUrl string `json:"img_url"`
 }
 
 type MenuElement struct {
-	Png		string	`json:"png"`
-	Category	string	`json:"category"`
-	MenuLinks	[]MenuLinkPair	`json:"menu_links"`
+	Png       string         `json:"png"`
+	Category  string         `json:"category"`
+	MenuLinks []MenuLinkPair `json:"menu_links"`
 }
 
 type MenuLinkPair struct {
-	MenuLink	string	`json:"menu_link"`
-	LinkText 	string	`json:"link_text"`
+	MenuLink string `json:"menu_link"`
+	LinkText string `json:"link_text"`
 }
 
 type Document struct {
-	Ident	string	`json:"identifier"`
-	Created	string	`json:"created"`
-	Body	string	`json:"body"`
-	Category	string	`json:"category"`
-	Sample  string
+	Ident    string `json:"identifier"`
+	Created  string `json:"created"`
+	Body     string `json:"body"`
+	Category string `json:"category"`
+	Sample   string
 }
 
 type AdminTables struct {
-	Tables		[]Table	`json:"tables"`
+	Tables []Table `json:"tables"`
 }
 
 type Table struct {
-	TableName	string	`json:"table_name"`
-	TableData	[]TableData	`json:"table_data"`
+	TableName string      `json:"table_name"`
+	TableData []TableData `json:"table_data"`
 }
 
 type TableData struct {
-	DisplayName		string	`json:"display_name"`
-	Link			string	`json:"link"`
+	DisplayName string `json:"display_name"`
+	Link        string `json:"link"`
 }
 
-
 func NewDocument(ident string, created *time.Time, body string, category string) Document {
-	
+
 	var ts time.Time
 	if created == nil {
 		rn := time.Now()
 		ts = time.Date(rn.Year(), rn.Month(), rn.Day(), rn.Hour(), rn.Minute(),
-						rn.Second(), rn.Nanosecond(), rn.Location())
+			rn.Second(), rn.Nanosecond(), rn.Location())
 	} else {
 		ts = *created
 	}
-	
+
 	return Document{Ident: ident, Created: ts.String(), Body: body, Category: category}
 }
 
 type DocumentUpload struct {
-	Name	string	`json:"name"`
-	Category	string	`json:"category"`
-	Text	string	`json:"text"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Text     string `json:"text"`
 }
-
 
 type HeaderIo interface {
 	GetHeaders() (*HeaderCollection, error)
 	AddHeaders(HeaderCollection) error
-	GetMenuLinks()	(*MenuElement, error)
+	GetMenuLinks() (*MenuElement, error)
 }
 
 /*
@@ -120,7 +120,8 @@ func GetHeaders(redisCfg RedisConf) (*HeaderCollection, error) {
 		return nil, err
 	}
 	header := &HeaderCollection{}
-	err = json.Unmarshal([]byte(d), header); if err != nil {
+	err = json.Unmarshal([]byte(d), header)
+	if err != nil {
 		return nil, err
 	}
 	return header, nil
@@ -139,7 +140,8 @@ func GetMenuLinks(redisCfg RedisConf) (*MenuElement, error) {
 		return nil, err
 	}
 	header := &MenuElement{}
-	err = json.Unmarshal([]byte(d), header); if err != nil {
+	err = json.Unmarshal([]byte(d), header)
+	if err != nil {
 		return nil, err
 	}
 	return header, nil
@@ -158,7 +160,8 @@ func GetAdminTables(redisCfg RedisConf) (*AdminTables, error) {
 		return nil, err
 	}
 	tables := &AdminTables{}
-	err = json.Unmarshal([]byte(d), tables); if err != nil {
+	err = json.Unmarshal([]byte(d), tables)
+	if err != nil {
 		return nil, err
 	}
 	return tables, nil
@@ -199,33 +202,29 @@ func (d *Document) MakeSample() string {
 
 /*
 Retrieve all documents from the category specified in the argument category
+
 	:param category: the category to get documents from
 */
 func GetAllDocuments(category string, redisCfg RedisConf) ([]*Document, error) {
 	rdc := NewRedisClient(redisCfg)
-	fmt.Fprintf(os.Stdout, "%+v\n", redisCfg)
 	ids, err := rdc.AllDocIds()
 	if err != nil {
-		fmt.Fprint(os.Stdout, "failed 1")
 		return nil, err
 	}
 	var docs []*Document
 	for idx := range ids {
 		doc, err := rdc.GetItem(ids[idx])
 		if err != nil {
-			fmt.Fprint(os.Stdout, "failed 2")
 			return nil, err
 		}
 		if doc.Category != category {
 			continue
 		}
-		
 		docs = append(docs, &Document{
-			Ident: doc.Ident,
+			Ident:   doc.Ident,
 			Created: doc.Created,
-			Body: doc.Body,
-			Sample: doc.MakeSample(),
-
+			Body:    doc.Body,
+			Sample:  doc.MakeSample(),
 		})
 	}
 	return docs, nil
@@ -240,4 +239,18 @@ func AddDocument(d Document, redisCfg RedisConf) error {
 	return rdc.AddDoc(d)
 }
 
+/*
+	 convert markdown to html
+		:param md: the byte array containing the Markdown to convert
+*/
+func MdToHTML(md []byte) []byte {
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+	p := parser.NewWithExtensions(extensions)
+	doc := p.Parse(md)
 
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	opts := html.RendererOptions{Flags: htmlFlags}
+	renderer := html.NewRenderer(opts)
+
+	return markdown.Render(doc, renderer)
+}

@@ -23,6 +23,6 @@ build-seed-cmd:
 	go build -o ./build/linux/$(SEED_CMD)/$(SEED_CMD) ./cmd/$(SEED_CMD)/$(SEED_CMD).go
 
 dev-run:
-	go build -ldflags "-X main.WEB_ROOT=/home/aeth/keiji/html" \
+	go build -ldflags "-X main.WEB_ROOT=$(WEB_ROOT)" \
 	-o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go && \
 	./build/linux/$(WEBSERVER)/$(WEBSERVER) .env
