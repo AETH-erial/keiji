@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"strings"
 	"os"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
@@ -162,7 +163,7 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 		})
 		return
 	}
-	fext := strings.Split(f, ".")[len()strings.Split(f, ".")-1]
+	fext := strings.Split(f, ".")[len(strings.Split(f, "."))-1]
 	var ctype string
 	switch {
 	case fext == "css":
