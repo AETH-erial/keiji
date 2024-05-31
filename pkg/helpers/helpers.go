@@ -3,7 +3,6 @@ package helpers
 import (
 	"encoding/json"
 
-	"strings"
 	"time"
 
 	"github.com/gomarkdown/markdown"
@@ -54,12 +53,7 @@ type MenuElement struct {
 	MenuLinks []MenuLinkPair `json:"menu_links"`
 }
 
-type MenuLinkPair struct {
-	MenuLink string `json:"menu_link"`
-	LinkText string `json:"link_text"`
-}
-
-type Document struct {
+type DocumentOld struct {
 	Ident    string `json:"identifier"`
 	Created  string `json:"created"`
 	Body     string `json:"body"`
@@ -181,23 +175,6 @@ func AddHeaders(h HeaderCollection, redisCfg RedisConf) error {
 		return err
 	}
 	return nil
-}
-
-/*
-Truncates a text post into a 256 character long 'sample' for displaying posts
-*/
-func (d *Document) MakeSample() string {
-	t := strings.Split(d.Body, "")
-	var sample []string
-	if len(d.Body) < 256 {
-		return d.Body
-	}
-	for i := 0; i < 256; i++ {
-		sample = append(sample, t[i])
-	}
-	sample = append(sample, " ...")
-	return strings.Join(sample, "")
-
 }
 
 /*
