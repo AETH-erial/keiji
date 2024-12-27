@@ -12,8 +12,8 @@ import (
 func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
 	ctx.HTML(200, "admin", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
-			"headers": c.Headers().Elements,
+			"menu": c.database.GetDropdownElements(),
+			"headers": c.database.GetNavBarLinks(),
 		},
 		"Tables": c.FormatDocTable().Tables,
 
@@ -40,8 +40,8 @@ func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
 	}
 	ctx.HTML(200, "blogpost_editor", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
-			"headers": c.Headers().Elements,
+			"menu": c.database.GetDropdownElements(),
+			"headers": c.database.GetNavBarLinks(),
 		},
 		"HttpMethod": "patch",
 		"Ident": doc.Ident,
@@ -75,8 +75,8 @@ func (c *Controller) ServeNewBlogPage(ctx *gin.Context) {
 
 	ctx.HTML(200, "new_blogpost", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
-			"headers": c.Headers().Elements,
+			"menu": c.database.GetDropdownElements(),
+			"headers": c.database.GetNavBarLinks(),
 		},
 		"HttpMethod": "post",
 		"Topics": helpers.Topics,
@@ -106,8 +106,8 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 func (c *Controller) ServeFileUpload(ctx *gin.Context) {
 	ctx.HTML(200, "upload", gin.H{
 		"navigation": gin.H{
-			"menu": c.Menu(),
-			"headers": c.Headers().Elements,
+			"menu": c.database.GetDropdownElements(),
+			"headers": c.database.GetNavBarLinks(),
 		},
 	})
 }
@@ -115,29 +115,19 @@ func (c *Controller) ServeFileUpload(ctx *gin.Context) {
 
 
 func (c *Controller) SaveFile(ctx *gin.Context) {
-	file, err := ctx.FormFile("file")
-	if err != nil {
-		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
-		return
-	}
 	var img helpers.ImageStoreItem
-	err = ctx.ShouldBind(&img); if err != nil {
+	err := ctx.ShouldBind(&img); if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
-	savedImg := helpers.NewImageStoreItem(file.Filename, img.Title, img.Desc)
-	err = c.SaveImage(savedImg); if err != nil {
+	savedImg := helpers.NewImageStoreItem(img.Title, img.Desc)
+	err = c.database.AddImage(savedImg); if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
 
 
 	// Upload the file to specific dst.
-	err = ctx.SaveUploadedFile(file, savedImg.AbsolutePath)
-	if err != nil {
-		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
-		return
-	}
 
 	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
 }

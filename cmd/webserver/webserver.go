@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"database/sql"
 
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"git.aetherial.dev/aeth/keiji/pkg/routes"
+	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 )
 
 var WEB_ROOT string
@@ -101,8 +103,18 @@ func main() {
 		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
 	)
 	e := gin.Default()
+	dbfile := "sqlite.db"
+	db, err := sql.Open("sqlite3", dbfile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	e.HTMLRender = renderer
-	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR)
+	webserverDb := helpers.NewSQLiteRepo(db)
+	err = webserverDb.Migrate()
+	if err != nil {
+		log.Fatal(err)
+	}
+	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR, webserverDb)
 	if os.Getenv("SSL_MODE") == "ON" {
 		e.RunTLS(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
 		os.Getenv(env.CHAIN), os.Getenv(env.KEY))

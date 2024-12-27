@@ -6,9 +6,13 @@ build/linux/webserver/*
 build/linux/seed/*
 
 html/assets/images/*
+html/
 
 # db seed data
 db_seed/*
 
+sqlite.db
+
 # ignoring nohup.out file
 nohup.out
+

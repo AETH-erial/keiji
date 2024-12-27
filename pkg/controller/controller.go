@@ -10,31 +10,12 @@ import (
 type Controller struct{
 	WebRoot		string
 	Domain		string
+	database    helpers.DocumentIO
 	RedisConfig helpers.RedisConf
 	Cache		*helpers.AllCache
 }
 
-/*
-Retrieve the header configuration from redis
-*/
-func (c *Controller) Headers() *helpers.HeaderCollection {
-	headers, err := helpers.GetHeaders(c.RedisConfig)
-	if err != nil {
-		log.Fatal(err, "Headers couldnt be loaded. Exiting.")
-	}
-	return headers
-}
 
-/*
-Retrieve the menu configuration from redis
-*/
-func (c *Controller) Menu() *helpers.MenuElement {
-	links, err := helpers.GetMenuLinks(c.RedisConfig)
-	if err != nil {
-		log.Fatal(err, "Menu links couldnt be couldnt be loaded. Exiting.")
-	}
-	return links
-}
 
 /*
 Retrieve the administrator table configuration from redis
@@ -73,24 +54,14 @@ func (c *Controller) FormatDocTable() *helpers.AdminTables {
 }
 
 
-/*
-Save a new image store item
-*/
-func (c *Controller) SaveImage(img *helpers.ImageStoreItem) error {
-	rds := helpers.NewRedisClient(c.RedisConfig)
-	err := rds.AddImage(img)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 
-func NewController(root string, domain string, redisPort string, redisAddr string) *Controller {
+func NewController(root string, domain string, redisPort string, redisAddr string, database helpers.DocumentIO) *Controller {
 	return &Controller{WebRoot: root, Cache: helpers.NewCache(),
 								Domain: domain, RedisConfig: helpers.RedisConf{
 																		Port: redisPort,
 																		Addr: redisAddr,
 																		},
+																		database: database,
 																	}
 }

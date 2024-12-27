@@ -88,8 +88,8 @@ func (c *Controller) AdminPanel(ctx *gin.Context) {
 
 	ctx.HTML(http.StatusOK, "admin", gin.H{
 		"navigation": gin.H{
-			"headers": c.Headers().Elements,
-			"menu":    c.Menu(),
+			"headers": c.database.GetNavBarLinks(),
+			"menu":    c.database.GetDropdownElements(),
 		},
 		"Tables": c.AdminTables().Tables,
 	})

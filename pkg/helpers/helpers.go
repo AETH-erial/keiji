@@ -70,7 +70,7 @@ type Table struct {
 	TableData []TableData `json:"table_data"`
 }
 
-type TableData struct {
+type TableData struct { // TODO: add this to the database io interface 
 	DisplayName string `json:"display_name"`
 	Link        string `json:"link"`
 }
