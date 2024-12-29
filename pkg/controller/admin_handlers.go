@@ -9,33 +9,6 @@ import (
 
 const AUTH_COOKIE_NAME = "X-Server-Auth"
 
-// AddDocument uploads a document to redis
-// @Description AddDocument uploads a document to redis
-// @Tags admin
-// @Success 200
-// @Param doc body helpers.DocumentUpload true "Redis Document Upload"
-// @Router	/api/v1/admin/add-document [post]
-func (c *Controller) AddDocument(ctx *gin.Context) {
-
-	var upload helpers.DocumentUpload
-
-	err := ctx.BindJSON(&upload)
-	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
-		return
-	}
-	newPost := helpers.NewDocument(upload.Name, nil, upload.Text, upload.Category)
-	err = helpers.AddDocument(newPost, c.RedisConfig)
-	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
-		return
-	}
-
-}
 
 // @Name ServeLogin
 // @Summary serves the HTML login page
@@ -80,6 +53,86 @@ func (c *Controller) Auth(ctx *gin.Context) {
 
 }
 
+
+/*
+@Name AddAdminTableEntry 
+@Summary add an entry to the admin table
+@Tags admin
+@Router /admin/panel
+*/
+func (c *Controller) AddAdminTableEntry(ctx *gin.Context) {
+	tables := make(map[string][]helpers.TableData)
+	adminPage := helpers.AdminPage{Tables: tables}
+	err := ctx.ShouldBind(&adminPage)
+	if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+	for category := range adminPage.Tables {
+		for entry := range adminPage.Tables[category] {
+			err := c.database.AddAdminTableEntry(adminPage.Tables[category][entry], category)
+			if err != nil {
+				ctx.JSON(400, map[string]string{
+					"Error": err.Error(),
+				})
+				return
+			}
+
+		}
+	}
+	ctx.Data(200, "text", []byte("Categories populated."))
+}
+
+/*
+@Name AddMenuItem
+@Summary add an entry to the sidebar menu
+@Tags admin
+@Router /admin/menu
+*/
+func (c *Controller) AddMenuItem(ctx *gin.Context) {
+	var item helpers.MenuLinkPair
+	err := ctx.ShouldBind(&item); if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+	err = c.database.AddMenuItem(item); if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+	ctx.Data(200, "text", []byte("menu item added."))
+}
+
+/*
+@Name AddNavbarItem
+@Summary add an entry to the navbar
+@Tags admin
+@Router /admin/navbar
+*/
+func (c *Controller) AddNavbarItem(ctx *gin.Context) {
+
+	var item helpers.NavBarItem
+	err := ctx.ShouldBind(&item); if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+	err = c.database.AddNavbarItem(item); if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+	ctx.Data(200, "text", []byte("navbar item added."))
+}
+
+
 // @Name AdminPanel
 // @Summary serve the admin panel page
 // @Tags admin
@@ -91,7 +144,7 @@ func (c *Controller) AdminPanel(ctx *gin.Context) {
 			"headers": c.database.GetNavBarLinks(),
 			"menu":    c.database.GetDropdownElements(),
 		},
-		"Tables": c.AdminTables().Tables,
+		"Tables": c.database.GetAdminTables().Tables,
 	})
 
 }

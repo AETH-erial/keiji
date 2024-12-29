@@ -12,6 +12,8 @@ import (
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"git.aetherial.dev/aeth/keiji/pkg/routes"
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var WEB_ROOT string
@@ -30,10 +32,12 @@ func main() {
 	renderer.AddFromFiles(
 		"home",
 		fmt.Sprintf("%s/templates/home.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/writing.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/head.html", WEB_ROOT),
 	)
 	renderer.AddFromFiles(
 		"blogpost",
@@ -102,6 +106,23 @@ func main() {
 		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
 		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
 	)
+	renderer.AddFromFiles(
+		"writing",
+		/*
+		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
+		fmt.Sprintf("%s/templates/head.html", WEB_ROOT),
+		*/
+		fmt.Sprintf("%s/templates/writing.html", WEB_ROOT),
+	)
+	renderer.AddFromFiles(
+		"listing",
+		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
+		)
+	renderer.AddFromFiles(
+		"head",
+		fmt.Sprintf("%s/templates/head.html", WEB_ROOT),
+		)
 	e := gin.Default()
 	dbfile := "sqlite.db"
 	db, err := sql.Open("sqlite3", dbfile)

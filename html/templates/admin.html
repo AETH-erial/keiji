@@ -18,16 +18,15 @@
 
     {{ template "navigation.html" .navigation }}
     <div class="container-fluid row">
-        {{ range .Tables }}
+        {{ range $key, $value := .Tables }}
             <div class="col">
-                <div class="col container h-2 p-2" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
-                    {{ .TableName }}
+                <div class="col container h-2 p-2" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">{{ $key }}
                 </div>
                     <table class="table table-dark table-hover">
                         <thead>
                         </thead>
                     <tbody>
-                    {{ range .TableData }}
+                    {{ range $value }}
                         <tr>
                             <th scope="row" style="color: white; height: fit-content; font-size: larger; font-family: monospace;">
                                 <a href="{{ .Link }}">{{ .DisplayName }}</a></th>

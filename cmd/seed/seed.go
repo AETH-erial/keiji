@@ -7,6 +7,7 @@ import (
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 

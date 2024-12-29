@@ -4,8 +4,8 @@
 <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/api/v1/style/bootstrap.min.css">
-    <link rel="stylesheet" href="/api/v1/style/mdb/mdb.min.css">
+    <link rel="stylesheet" href="/api/v1/cdn/bootstrap.min.css">
+    <link rel="stylesheet" href="/api/v1/cdn/mdb.min.css">
 </head>
 
 <body style="background-color: rgb(56, 56, 56);">
@@ -21,8 +21,8 @@
                         <form method="post" hx-post="/admin/posts" hx-ext="json-enc" hx-target="#response" hx-swap="innerHTML">
                             <div class="row"
                                 style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
-                                <a>Post ID:</a>
-                                <textarea name="identifier"
+                                <a>Title:</a>
+                                <textarea name="title"
                                     style="background-color: rgb(73, 73, 73); color: white;">{{ .Ident }}</textarea>
                             </div>
                             <div class="row"
@@ -56,9 +56,9 @@
             </div>
         </div>
     </div>
-    <script type="text/javascript" src="/api/v1/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-    <script src="/api/v1/htmx/htmx.min.js"></script>
-    <script src="/api/v1/htmx/json-enc.js"></script>
+    <script type="text/javascript" src="/api/v1/cdn/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="/api/v1/cdn/htmx.min.js"></script>
+    <script src="/api/v1/cdn/json-enc.js"></script>
 </body>
 </html>
 {{ end }}

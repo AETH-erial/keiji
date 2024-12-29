@@ -76,14 +76,14 @@ func (r *RedisCaller) AddDoc(doc Document) error {
 		return &InvalidTopic{Topic: doc.Category}
 	}
 
-	val, err := r.Client.Get(r.ctx, doc.Ident).Result()
+	val, err := r.Client.Get(r.ctx, string(doc.Ident)).Result()
 	if err == redis.Nil {
 		data, err := json.Marshal(&doc)
 		if err != nil {
 			return err
 		}
 
-		err = r.Client.Set(r.ctx, doc.Ident, data, 0).Err()
+		err = r.Client.Set(r.ctx, string(doc.Ident), data, 0).Err()
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ func (r *RedisCaller) AddDoc(doc Document) error {
     } else if err != nil {
         return err
     }
-	return &DocAlreadyExists{Key: doc.Ident, Value: val}
+	return &DocAlreadyExists{Key: string(doc.Ident), Value: val}
 }
 
 

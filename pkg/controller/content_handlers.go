@@ -1,8 +1,10 @@
 package controller
 
 import (
-	"os"
 	"time"
+	"io"
+	"bytes"
+	"log"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -15,7 +17,7 @@ func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
 			"menu": c.database.GetDropdownElements(),
 			"headers": c.database.GetNavBarLinks(),
 		},
-		"Tables": c.FormatDocTable().Tables,
+		"Tables": c.database.GetAdminTables().Tables,
 
 	})
 
@@ -23,15 +25,14 @@ func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
 
 
 func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
-	rds := helpers.NewRedisClient(c.RedisConfig)
-	post, exist := ctx.Params.Get("post-name")
+	post, exist := ctx.Params.Get("id")
 	if !exist {
 		ctx.JSON(404, map[string]string{
 			"Error": "the requested file could not be found",
 		})
 		return
 	}
-	doc, err := rds.GetItem(post)
+	doc, err := c.database.GetDocument(helpers.Identifier(post))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": err.Error(),
@@ -60,8 +61,7 @@ func (c *Controller) UpdateBlogPost(ctx *gin.Context) {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
-	rds := helpers.NewRedisClient(helpers.RedisConf{Addr: os.Getenv("REDIS_ADDR"), Port: os.Getenv("REDIS_PORT")})
-	err = rds.UpdatePost(doc.Ident, doc); if err != nil {
+	err = c.database.UpdateDocument(doc); if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
@@ -93,8 +93,7 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
-	rds := helpers.NewRedisClient(helpers.RedisConf{Addr: os.Getenv("REDIS_ADDR"), Port: os.Getenv("REDIS_PORT")})
-	err = rds.AddDoc(doc); if err != nil {
+	err = c.database.AddDocument(doc); if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
@@ -115,19 +114,37 @@ func (c *Controller) ServeFileUpload(ctx *gin.Context) {
 
 
 func (c *Controller) SaveFile(ctx *gin.Context) {
-	var img helpers.ImageStoreItem
+	var img helpers.Image
 	err := ctx.ShouldBind(&img); if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
-	savedImg := helpers.NewImageStoreItem(img.Title, img.Desc)
-	err = c.database.AddImage(savedImg); if err != nil {
+	file, err := ctx.FormFile("file")
+	if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
-
-
-	// Upload the file to specific dst.
+	fh, err := file.Open()
+	if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	fb := make([]byte, file.Size)
+	var output bytes.Buffer
+	for {
+		n, err := fh.Read(fb)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		output.Write(fb[:n])
+	}
+	err = c.database.AddImage(fb, img.Title, img.Desc); if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
 
 	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
 }

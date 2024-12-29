@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"mime/multipart"
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"github.com/google/uuid"
@@ -44,7 +45,7 @@ type Identifier string
 
 type Document struct {
 	Row int
-	Ident   string   `json:"id"`
+	Ident   Identifier   `json:"id"`
 	Title    string `json:"title"`
 	Created  string `json:"created"`
 	Body     string `json:"body"`
@@ -70,9 +71,10 @@ func (d *Document) MakeSample() string {
 }
 
 type Image struct {
-	Ident string
-	Location string
-	Title    string
+	Ident Identifier `json:"identifier"`
+	Location string  `json:"title" form:"title"`
+	Title    string  `json:"description" form:"description"`
+	File        *multipart.FileHeader `form:"file"`
 	Desc     string
 	Created string
 	Category string
@@ -82,15 +84,20 @@ type Image struct {
 type DocumentIO interface {
 	GetDocument(id Identifier) (Document, error)
 	GetImage(id Identifier) (Image, error)
+	GetAllImages() []Image
 	UpdateDocument(doc Document) error
 	DeleteDocument(id Identifier) error
 	AddDocument(doc Document) error
-	AddImage(img Image) error
+	AddImage(data []byte, title, desc string) error
+	AddAdminTableEntry(TableData, string) error
+	AddNavbarItem(NavBarItem) error
+	AddMenuItem(MenuLinkPair) error
 	GetByCategory(category string) []Document
 	AllDocuments() []Document
 	GetDropdownElements() []MenuLinkPair
 	GetNavBarLinks() []NavBarItem
 	GetAssets() []Asset
+	GetAdminTables() AdminPage
 }
 
 var (
@@ -117,10 +124,10 @@ func (r *SQLiteRepo) Migrate() error {
 	postsTable := `
     CREATE TABLE IF NOT EXISTS posts(
         row INTEGER PRIMARY KEY AUTOINCREMENT,
-		id TEXT NOT NULL,
+		id TEXT NOT NULL UNIQUE,
 		title TEXT NOT NULL,
         created TEXT NOT NULL,
-        body TEXT NOT NULL UNIQUE,
+        body TEXT NOT NULL,
         category TEXT NOT NULL,
 		sample TEXT NOT NULL
     );
@@ -131,9 +138,8 @@ func (r *SQLiteRepo) Migrate() error {
 		id TEXT NOT NULL,
 		title TEXT NOT NULL,
 		location TEXT NOT NULL,
-		description TEXT NOT NULL,
-		created TEXT NOT NULL,
-		category TEXT NOT NULL
+		desc TEXT NOT NULL,
+		created TEXT NOT NULL
 	);
 	`
 	menuItemsTable := `
@@ -157,7 +163,15 @@ func (r *SQLiteRepo) Migrate() error {
 		data BLOB NOT NULL
 	);
 	`
-	seedQueries := []string{postsTable, imagesTable, menuItemsTable, navbarItemsTable, assetTable}
+	adminTable := `
+	CREATE TABLE IF NOT EXISTS admin(
+		row INTEGER PRIMARY KEY AUTOINCREMENT,
+		display_name TEXT NOT NULL,
+		link TEXT NOT NULL,
+		category TEXT NOT NULL
+	);
+	`
+	seedQueries := []string{postsTable, imagesTable, menuItemsTable, navbarItemsTable, assetTable, adminTable}
     for i := range seedQueries {
 	    _, err := r.db.Exec(seedQueries[i])
 	    if err != nil {
@@ -168,8 +182,13 @@ func (r *SQLiteRepo) Migrate() error {
 }
 
 
-
-func (s *SQLiteRepo) Seed(menu string, pngs string, dir string) {
+/*
+Seed the database with the necessary configuration items to function properly
+	:param menu: the text file containing the k/v pair for the navigation menu
+	:param pngs: the text file containing the k/v pair for the icon names -> redirect links
+	:param dir: the directory that the PNG assets are in (note: the k/v pair in pngs will read from this dir)
+*/
+func (s *SQLiteRepo) Seed(menu string, pngs string, dir string) { // TODO: make a bootstrap file with a comprehensive unmarshalling sequence for tighter control of the seeing procedute
 	b, err := os.ReadFile(menu)
 
 	if err != nil {log.Fatal(err)}
@@ -210,11 +229,12 @@ func (s *SQLiteRepo) Seed(menu string, pngs string, dir string) {
 		}
 
 	}
+	
 }
 
 
 /*
-Get all dropdown menu elements
+Get all dropdown menu elements. Returns a list of MenuLinkPair structs with the text and redirect location
 */
 func (s *SQLiteRepo) GetDropdownElements() []MenuLinkPair {
 	rows, err := s.db.Query("SELECT * FROM menu")
@@ -236,7 +256,7 @@ func (s *SQLiteRepo) GetDropdownElements() []MenuLinkPair {
 
 
 /*
-Get all nav bar items
+Get all nav bar items. Returns a list of NavBarItem structs with the png data, the file name, and the redirect location of the icon
 */
 func (s *SQLiteRepo) GetNavBarLinks() []NavBarItem {
 
@@ -277,6 +297,26 @@ func (s *SQLiteRepo) GetAssets() []Asset {
 
 }
 
+/*
+get all assets from the asset table
+*/
+func (s *SQLiteRepo) GetAdminTables() AdminPage {
+	rows, err := s.db.Query("SELECT * FROM admin")
+	adminPage := AdminPage{Tables: map[string][]TableData{}}
+	defer rows.Close()
+	for rows.Next() {
+		var item TableData
+		var id int
+		var category string
+		err = rows.Scan(&id, &item.DisplayName, &item.Link, &category)
+		if err != nil {
+			log.Fatal(err)
+		}
+		adminPage.Tables[category] = append(adminPage.Tables[category], item)
+	}
+	return adminPage 
+
+}
 
 
 /*
@@ -288,7 +328,8 @@ func (s *SQLiteRepo) GetDocument(id Identifier) (Document, error) {
 	row := s.db.QueryRow("SELECT * FROM posts WHERE id = ?", id)
 
 	var post Document
-	if err := row.Scan(&post); err != nil {
+	var rowNum int
+	if err := row.Scan(&rowNum, &post.Ident, &post.Title, &post.Created, &post.Body, &post.Category, &post.Sample); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return post, ErrNotExists
 		}
@@ -298,8 +339,12 @@ func (s *SQLiteRepo) GetDocument(id Identifier) (Document, error) {
 
 }
 
+
+
+
 /*
 Get all documents by category
+	:param category: the category to retrieve all docs from
 */
 func (s *SQLiteRepo) GetByCategory(category string) []Document {
 	rows, err := s.db.Query("SELECT * FROM posts WHERE category = ?", category)
@@ -330,12 +375,12 @@ get image data from the images table
 */
 func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	row := s.db.QueryRow("SELECT * FROM images WHERE id = ?", id)
+	var rowNum int
 	var title string
 	var location string
 	var desc string
-	var category string
 	var created string
-	if err := row.Scan(&title, &location, &desc, &created, &category); err != nil {
+	if err := row.Scan(&rowNum, &title, &location, &desc, &created); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Image{}, ErrNotExists
 		}
@@ -345,8 +390,39 @@ func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	if err != nil {
 		return Image{}, err
 	}
-	return Image{Title: title, Location: location, Desc: desc, Data: data, Created: created, Category: category}, nil
+	return Image{Ident: id, Title: title, Location: location, Desc: desc, Data: data, Created: created}, nil
 }
+
+/*
+Get all of the images from the datastore
+*/
+func (s *SQLiteRepo) GetAllImages() []Image {
+	rows, err := s.db.Query("SELECT * FROM images")
+	if err != nil {
+		log.Fatal(err)
+	}
+	imgs := []Image{}
+	for rows.Next() {
+		var img Image
+		var rowNum int
+		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Location, &img.Desc, &img.Created)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, err := os.ReadFile(img.Location)
+		if err != nil {
+			log.Fatal(err)
+		}
+		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Location: img.Location, Desc: img.Desc, Data: b, Created: img.Created})
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return imgs
+}
+
+
 
 /*
 Add an image to the database
@@ -355,12 +431,14 @@ Add an image to the database
 	:param desc: the description of the image, if any
 	:param data: the binary data for the image
 */
-func (s *SQLiteRepo) AddImage(img Image) error {
-	err := os.WriteFile(path.Join(img.Location, img.Ident), img.Data, os.ModeAppend) 
+func (s *SQLiteRepo) AddImage(data []byte, title string, desc string) error {
+	id := newIdentifier()
+	fsLoc := path.Join(GetImageStore(), string(id))
+	err := os.WriteFile(fsLoc, data, os.ModePerm) 
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec("INSERT INTO images (id, title, location, desc, created, category) VALUES (?,?,?,?,?,?,?)", img.Ident, img.Title, img.Location, img.Desc, img.Created, img.Category)
+	_, err = s.db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", string(id), title, fsLoc, desc, time.Now().String())
 	if err != nil {
 		return err
 	}
@@ -368,7 +446,10 @@ func (s *SQLiteRepo) AddImage(img Image) error {
 }
 
 
-
+/*
+Updates a document in the database with the supplied. Only changes the title, the body, category. Keys off of the documents Identifier
+	:param doc: the Document to upload into the database
+*/
 func (s *SQLiteRepo) UpdateDocument(doc Document) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -383,7 +464,10 @@ func (s *SQLiteRepo) UpdateDocument(doc Document) error {
 	tx.Commit()
 	return nil
 }
-
+/*
+Adds a MenuLinkPair to the menu database table
+	:param item: the MenuLinkPair to upload
+*/
 func (s *SQLiteRepo) AddMenuItem(item MenuLinkPair) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -400,6 +484,10 @@ func (s *SQLiteRepo) AddMenuItem(item MenuLinkPair) error {
 	
 }
 
+/*
+Adds an item to the navbar database table
+	:param item: the NavBarItem to upload
+*/
 func (s *SQLiteRepo) AddNavbarItem(item NavBarItem) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -416,6 +504,12 @@ func (s *SQLiteRepo) AddNavbarItem(item NavBarItem) error {
 	
 }
 
+
+/*
+Adds an asset to the asset database table asset
+	:param name: the name of the asset (filename)
+	:param data: the byte array of the PNG to upload TODO: limit this to 256kb
+	*/
 func (s *SQLiteRepo) AddAsset(name string, data []byte) error {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -431,14 +525,18 @@ func (s *SQLiteRepo) AddAsset(name string, data []byte) error {
 	return nil
 }	
 
-
+/*
+Adds a document to the database (for text posts)
+	:param doc: the Document to add
+*/
 func (s *SQLiteRepo) AddDocument(doc Document) error {
+	id := uuid.New()
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt,_ := tx.Prepare("INSERT INTO posts (id, title, created, body, category,sample) VALUES (?,?,?,?,?,?)")
-	_, err = stmt.Exec(doc.Ident, doc.Title, doc.Created, doc.Body, doc.Category, doc.Sample)
+	stmt,_ := tx.Prepare("INSERT INTO posts(id, title, created, body, category, sample) VALUES (?,?,?,?,?,?)")
+	_, err = stmt.Exec(id.String(), doc.Title, doc.Created, doc.Body, doc.Category, doc.MakeSample())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -446,6 +544,26 @@ func (s *SQLiteRepo) AddDocument(doc Document) error {
 	tx.Commit()
 	return nil
 
+}
+/*
+Add an entry to the 'admin' table in the database
+	:param item: an admin table k/v text to redirect pair
+	:param tableName: the name of the table to populate the link in on the UI
+*/
+func (s *SQLiteRepo) AddAdminTableEntry(item TableData, category string) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt,_ := tx.Prepare("INSERT INTO admin (display_name, link, category) VALUES (?,?,?)")
+	_, err = stmt.Exec(item.DisplayName, item.Link, category)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+
+	return nil
 }
 
 /*
@@ -476,7 +594,7 @@ func (s *SQLiteRepo) AllDocuments() []Document {
 	}
 	defer rows.Close()
 
-	var all []Document
+	all := []Document{}
 	for rows.Next() {
 		var post Document
 		if err := rows.Scan(&post.Ident, &post.Title, &post.Created, &post.Body, &post.Sample); err != nil {
@@ -515,9 +633,9 @@ Create a new ImageStoreItem
 	:param desc: the description to associate to the image
 */
 func NewImageStoreItem(title string, desc string) Image {
-	id := uuid.New()
+	id := newIdentifier()
 	img := Image{
-		Ident:   id.String(),
+		Ident:   id,
 		Title:        title,
 		Category:     DIGITAL_ART,
 		Location: GetImageStore(),
@@ -534,6 +652,12 @@ a function so that refactoring is easier
 func GetImageStore() string {
 	return os.Getenv(env.IMAGE_STORE)
 }
+
+// Wrapping the new id call in a function to make refactoring easier
+func newIdentifier() Identifier {
+	return Identifier(uuid.NewString())
+}
+
 
 /*
 Return database entries of the images that exist in the imagestore

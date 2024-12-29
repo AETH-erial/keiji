@@ -1,14 +1,12 @@
 package helpers
 
 import (
-	"encoding/json"
 
 	"time"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
-	"github.com/redis/go-redis/v9"
 )
 
 const HEADER_KEY = "header-links"
@@ -54,21 +52,17 @@ type MenuElement struct {
 }
 
 type DocumentOld struct {
-	Ident    string `json:"identifier"`
+	Ident    Identifier`json:"identifier"`
 	Created  string `json:"created"`
 	Body     string `json:"body"`
 	Category string `json:"category"`
 	Sample   string
 }
 
-type AdminTables struct {
-	Tables []Table `json:"tables"`
+type AdminPage struct {
+	Tables map[string][]TableData `json:"tables"`
 }
 
-type Table struct {
-	TableName string      `json:"table_name"`
-	TableData []TableData `json:"table_data"`
-}
 
 type TableData struct { // TODO: add this to the database io interface 
 	DisplayName string `json:"display_name"`
@@ -86,7 +80,7 @@ func NewDocument(ident string, created *time.Time, body string, category string)
 		ts = *created
 	}
 
-	return Document{Ident: ident, Created: ts.String(), Body: body, Category: category}
+	return Document{Ident: Identifier(ident), Created: ts.String(), Body: body, Category: category}
 }
 
 type DocumentUpload struct {
@@ -99,121 +93,6 @@ type HeaderIo interface {
 	GetHeaders() (*HeaderCollection, error)
 	AddHeaders(HeaderCollection) error
 	GetMenuLinks() (*MenuElement, error)
-}
-
-/*
-Retrieves the header data from the redis database
-*/
-func GetHeaders(redisCfg RedisConf) (*HeaderCollection, error) {
-	rds := NewRedisClient(redisCfg)
-	d, err := rds.Client.Get(rds.ctx, HEADER_KEY).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return nil, nil
-		}
-		return nil, err
-	}
-	header := &HeaderCollection{}
-	err = json.Unmarshal([]byte(d), header)
-	if err != nil {
-		return nil, err
-	}
-	return header, nil
-}
-
-/*
-Retrieves the menu elements from the database
-*/
-func GetMenuLinks(redisCfg RedisConf) (*MenuElement, error) {
-	rds := NewRedisClient(redisCfg)
-	d, err := rds.Client.Get(rds.ctx, MENU_KEY).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return nil, nil
-		}
-		return nil, err
-	}
-	header := &MenuElement{}
-	err = json.Unmarshal([]byte(d), header)
-	if err != nil {
-		return nil, err
-	}
-	return header, nil
-}
-
-/*
-retreives the admin table config from the database
-*/
-func GetAdminTables(redisCfg RedisConf) (*AdminTables, error) {
-	rds := NewRedisClient(redisCfg)
-	d, err := rds.Client.Get(rds.ctx, ADMIN_TABLE_KEY).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return nil, nil
-		}
-		return nil, err
-	}
-	tables := &AdminTables{}
-	err = json.Unmarshal([]byte(d), tables)
-	if err != nil {
-		return nil, err
-	}
-	return tables, nil
-}
-
-/*
-Place holder func to create the header element in redis
-*/
-func AddHeaders(h HeaderCollection, redisCfg RedisConf) error {
-	rdc := NewRedisClient(redisCfg)
-	data, err := json.Marshal(&h)
-	if err != nil {
-		return err
-	}
-	err = rdc.Client.Set(rdc.ctx, HEADER_KEY, data, 0).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-/*
-Retrieve all documents from the category specified in the argument category
-
-	:param category: the category to get documents from
-*/
-func GetAllDocuments(category string, redisCfg RedisConf) ([]*Document, error) {
-	rdc := NewRedisClient(redisCfg)
-	ids, err := rdc.AllDocIds()
-	if err != nil {
-		return nil, err
-	}
-	var docs []*Document
-	for idx := range ids {
-		doc, err := rdc.GetItem(ids[idx])
-		if err != nil {
-			return nil, err
-		}
-		if doc.Category != category {
-			continue
-		}
-		docs = append(docs, &Document{
-			Ident:   doc.Ident,
-			Created: doc.Created,
-			Body:    doc.Body,
-			Sample:  doc.MakeSample(),
-		})
-	}
-	return docs, nil
-
-}
-
-/*
-adds a text post document to the redis database
-*/
-func AddDocument(d Document, redisCfg RedisConf) error {
-	rdc := NewRedisClient(redisCfg)
-	return rdc.AddDoc(d)
 }
 
 /*

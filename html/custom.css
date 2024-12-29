@@ -23,6 +23,19 @@
 
   }
 
+/*This is modifying the btn-primary colors but you could create your own .btn-something class as well*/
+.btn-primary {
+  color: #fff;
+  background-color: rgba(38, 41, 50, 0.9);
+  border-color: #9dadbb; /*set the color you want here*/
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active, .open>.dropdown-toggle.btn-primary {
+  color: #8a3b3b;
+  background-color: rgba(58, 20, 20, 0.9);
+  border-color: rgb(142, 40, 40); /*set the color you want here*/
+}
+
+
   /* When you mouse over the navigation links, change their color */
   .sidenav a:hover {
     color: #f1f1f1;

@@ -1,35 +1,17 @@
 {{ define "home.html" }}
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="/api/v1/cdn/bootstrap.min.css">
-        <link rel="stylesheet" href="/api/v1/cdn/mdb.min.css">
-        <link rel="stylesheet" href="/api/v1/cdn/custom.css">
-    </head>
-
-    <body style="background-color: rgb(56, 56, 56);">
-    <div id="main">
-
-        {{ template "navigation.html" .navigation }}
-        <div class="container-fluid row">
-        {{ range .listings }}
-            <div class="col-sm hover-overlay" data-mdb-ripple-init data-mdb-ripple-color="light">
-                <div class="col-auto">
-                {{ template "listing.html" . }}
-                </div>
-            </div>
+    {{ template "head.html" }}
+    <body style="background-color: #191a1b;">
+    {{ template "navigation.html" .navigation }}
+    <div id="main"></div>
+    <div id="mySidenav" class="sidenav row">
+        {{ range .menu}}
+            <button class="btn-primary" hx-get="{{ .MenuLink }}" style="font-family: monospace;" hx-target="#main">
+                {{ .LinkText }}
+            </button>
         {{ end }}
-        </div>
-
-        <div id="mySidenav" class="sidenav">
-            <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
-            {{ range .menu}}
-                <a href="{{ .MenuLink }}" style="font-family: monospace;">{{ .LinkText }}</a>
-            {{ end }}
-          </div>
-        </div>
+    </div>
         <script type="text/javascript" src="/api/v1/cdn/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <script src="/api/v1/cdn/slide.js"></script>
         <script src="/api/v1/cdn/htmx.min.js"></script>

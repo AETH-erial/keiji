@@ -77,7 +77,7 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 		ctype = "text/css"
 	case fext == "js":
 		ctype = "text/javascript"
-	case fext == "json":
+	case fext == "json" || fext == "map":
 		ctype = "application/json"
 	case fext == "png":
 		ctype = "image/png"
