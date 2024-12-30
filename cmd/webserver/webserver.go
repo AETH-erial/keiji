@@ -1,26 +1,28 @@
 package main
 
 import (
+	"database/sql"
+	"flag"
 	"fmt"
 	"log"
 	"os"
-	"database/sql"
 
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
-	"git.aetherial.dev/aeth/keiji/pkg/routes"
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/routes"
+	"git.aetherial.dev/aeth/keiji/pkg/webpages"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var WEB_ROOT string
 var DOMAIN_NAME string
 
-
 func main() {
+	htmlSrc := flag.String("html-src", "", "Force the server to serve embedded content, for production use")
+	flag.Parse()
 	args := os.Args
 	err := env.LoadAndVerifyEnv(args[1], env.REQUIRED_VARS)
 	if err != nil {
@@ -28,101 +30,73 @@ func main() {
 	}
 	REDIS_PORT := os.Getenv("REDIS_PORT")
 	REDIS_ADDR := os.Getenv("REDIS_ADDR")
-	renderer := multitemplate.NewRenderer()
-	renderer.AddFromFiles(
-		"home",
-		fmt.Sprintf("%s/templates/home.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/writing.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/head.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"blogpost",
-		fmt.Sprintf("%s/templates/blogpost.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-
-	)
-	renderer.AddFromFiles(
-		"digital_art",
-		fmt.Sprintf("%s/templates/digital_art.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/centered_image.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"login",
-		fmt.Sprintf("%s/templates/login.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"admin",
-		fmt.Sprintf("%s/templates/admin.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/blogpost_editor.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"blogpost_editor",
-		fmt.Sprintf("%s/templates/blogpost_editor.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"new_blogpost",
-		fmt.Sprintf("%s/templates/new_blogpost.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"upload_status",
-		fmt.Sprintf("%s/templates/upload_status.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"unhandled_error",
-		fmt.Sprintf("%s/templates/unhandled_error.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"upload",
-		fmt.Sprintf("%s/templates/upload.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/menu.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/link.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"writing",
-		/*
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/navigation.html", WEB_ROOT),
-		fmt.Sprintf("%s/templates/head.html", WEB_ROOT),
-		*/
-		fmt.Sprintf("%s/templates/writing.html", WEB_ROOT),
-	)
-	renderer.AddFromFiles(
-		"listing",
-		fmt.Sprintf("%s/templates/listing.html", WEB_ROOT),
-		)
-	renderer.AddFromFiles(
+	var srcOpt webpages.ServiceOption
+	if *htmlSrc == "filesystem" {
+		srcOpt = webpages.FILESYSTEM
+	}
+	if *htmlSrc == "embed" {
+		srcOpt = webpages.EMBED
+	}
+	fmt.Println(srcOpt, *htmlSrc)
+	// htmlReader := webpages.NewContentLayer(webpages.ServiceOption(webpages.FILESYSTEM))
+	htmlReader := webpages.FilesystemWebpages{Webroot: os.Getenv("WEB_ROOT")}
+	renderer := multitemplate.NewDynamic()
+	renderer.AddFromString(
 		"head",
-		fmt.Sprintf("%s/templates/head.html", WEB_ROOT),
-		)
+		webpages.ReadToString(htmlReader, "head.html"),
+	)
+	renderer.AddFromString(
+		"navigation",
+		webpages.ReadToString(htmlReader, "navigation.html"),
+	)
+	renderer.AddFromString(
+		"home",
+		webpages.ReadToString(htmlReader, "home.html"),
+	)
+	renderer.AddFromString(
+		"blogpost",
+		webpages.ReadToString(htmlReader, "blogpost.html"),
+	)
+	renderer.AddFromString(
+		"digital_art",
+		webpages.ReadToString(htmlReader, "digital_art.html"),
+	)
+	renderer.AddFromString(
+		"login",
+		webpages.ReadToString(htmlReader, "login.html"),
+	)
+	renderer.AddFromString(
+		"admin",
+		webpages.ReadToString(htmlReader, "admin.html"),
+	)
+	renderer.AddFromString(
+		"blogpost_editor",
+		webpages.ReadToString(htmlReader, "blogpost_editor.html"),
+	)
+	renderer.AddFromString(
+		"new_blogpost",
+		webpages.ReadToString(htmlReader, "new_blogpost.html"),
+	)
+	renderer.AddFromString(
+		"upload_status",
+		webpages.ReadToString(htmlReader, "upload_status.html"),
+	)
+	renderer.AddFromString(
+		"unhandled_error",
+		webpages.ReadToString(htmlReader, "unhandled_error.html"),
+	)
+	renderer.AddFromString(
+		"upload",
+		webpages.ReadToString(htmlReader, "upload.html"),
+	)
+	renderer.AddFromString(
+		"writing",
+		webpages.ReadToString(htmlReader, "writing.html"),
+	)
+	renderer.AddFromString(
+		"listing",
+		webpages.ReadToString(htmlReader, "listing.html"),
+	)
 	e := gin.Default()
 	dbfile := "sqlite.db"
 	db, err := sql.Open("sqlite3", dbfile)
@@ -130,15 +104,16 @@ func main() {
 		log.Fatal(err)
 	}
 	e.HTMLRender = renderer
+	// 	e.LoadHTMLGlob("pkg/webpages/html/*.html")
 	webserverDb := helpers.NewSQLiteRepo(db)
 	err = webserverDb.Migrate()
 	if err != nil {
 		log.Fatal(err)
 	}
-	routes.Register(e, WEB_ROOT, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR, webserverDb)
+	routes.Register(e, DOMAIN_NAME, REDIS_PORT, REDIS_ADDR, webserverDb)
 	if os.Getenv("SSL_MODE") == "ON" {
 		e.RunTLS(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
-		os.Getenv(env.CHAIN), os.Getenv(env.KEY))
+			os.Getenv(env.CHAIN), os.Getenv(env.KEY))
 	}
 	e.Run(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")))
 }

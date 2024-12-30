@@ -2,10 +2,10 @@ package controller
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"strings"
-	"net/http"
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -49,14 +49,12 @@ func (c *Controller) ServeAsset(ctx *gin.Context) {
 	for i := range assets {
 		if strings.Contains(assets[i].Name, f) {
 			ctx.Data(200, "image/png", assets[i].Data)
-			return 
+			return
 		}
 	}
 	ctx.Data(http.StatusNotFound, "text", []byte("Couldnt find the image requested."))
 
 }
-
-
 
 // @Name ServeGeneric
 // @Summary serves file from the html file
@@ -84,7 +82,7 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 	default:
 		ctype = "text"
 	}
-	b, err := os.ReadFile(path.Join(c.WebRoot, f))
+	b, err := os.ReadFile(path.Join("html", f))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": "Could not serve the requested file",
