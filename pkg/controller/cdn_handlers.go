@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -82,13 +83,22 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 	default:
 		ctype = "text"
 	}
-	b, err := os.ReadFile(path.Join("html", f))
+	fh, err := c.FileIO.Open(path.Join("cdn", f))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": "Could not serve the requested file",
 			"msg":   err.Error(),
 		})
 		return
+	}
+	b, err := io.ReadAll(fh)
+	if err != nil {
+		ctx.JSON(500, map[string]string{
+			"Error": "Could not serve the requested file",
+			"msg":   err.Error(),
+		})
+		return
+
 	}
 	ctx.Data(200, ctype, b)
 }

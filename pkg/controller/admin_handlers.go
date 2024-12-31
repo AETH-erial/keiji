@@ -9,7 +9,6 @@ import (
 
 const AUTH_COOKIE_NAME = "X-Server-Auth"
 
-
 // @Name ServeLogin
 // @Summary serves the HTML login page
 // @Tags admin
@@ -49,13 +48,19 @@ func (c *Controller) Auth(ctx *gin.Context) {
 		return
 	}
 	ctx.SetCookie(AUTH_COOKIE_NAME, cookie, 3600, "/", c.Domain, false, false)
-	ctx.Header("HX-Redirect", "/admin/panel")
+
+	ctx.HTML(http.StatusOK, "admin", gin.H{
+		"navigation": gin.H{
+			"headers": c.database.GetNavBarLinks(),
+			"menu":    c.database.GetDropdownElements(),
+		},
+		"Tables": c.database.GetAdminTables().Tables,
+	})
 
 }
 
-
 /*
-@Name AddAdminTableEntry 
+@Name AddAdminTableEntry
 @Summary add an entry to the admin table
 @Tags admin
 @Router /admin/panel
@@ -93,13 +98,15 @@ func (c *Controller) AddAdminTableEntry(ctx *gin.Context) {
 */
 func (c *Controller) AddMenuItem(ctx *gin.Context) {
 	var item helpers.MenuLinkPair
-	err := ctx.ShouldBind(&item); if err != nil {
+	err := ctx.ShouldBind(&item)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
 		return
 	}
-	err = c.database.AddMenuItem(item); if err != nil {
+	err = c.database.AddMenuItem(item)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
@@ -117,13 +124,15 @@ func (c *Controller) AddMenuItem(ctx *gin.Context) {
 func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 
 	var item helpers.NavBarItem
-	err := ctx.ShouldBind(&item); if err != nil {
+	err := ctx.ShouldBind(&item)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
 		return
 	}
-	err = c.database.AddNavbarItem(item); if err != nil {
+	err = c.database.AddNavbarItem(item)
+	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
 		})
@@ -131,7 +140,6 @@ func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 	}
 	ctx.Data(200, "text", []byte("navbar item added."))
 }
-
 
 // @Name AdminPanel
 // @Summary serve the admin panel page

@@ -1,13 +1,15 @@
 package routes
 
 import (
+	"io/fs"
+
 	"git.aetherial.dev/aeth/keiji/pkg/controller"
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
 )
 
-func Register(e *gin.Engine, domain string, redisPort string, redisAddr string, database helpers.DocumentIO) {
-	c := controller.NewController(domain, redisPort, redisAddr, database)
+func Register(e *gin.Engine, domain string, redisPort string, redisAddr string, database helpers.DocumentIO, files fs.FS) {
+	c := controller.NewController(domain, redisPort, redisAddr, database, files)
 	web := e.Group("")
 	web.GET("/", c.ServeHome)
 	web.GET("/blog", c.ServeBlog)
