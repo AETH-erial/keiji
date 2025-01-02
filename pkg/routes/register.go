@@ -33,9 +33,11 @@ func Register(e *gin.Engine, domain string, redisPort string, redisAddr string, 
 	priv.POST("/navbar", c.AddNavbarItem)
 	priv.POST("/images/upload", c.SaveFile)
 	priv.GET("/posts/:id", c.GetBlogPostEditor)
+	priv.GET("/options/:id", c.PostOptions)
 	priv.POST("/posts", c.MakeBlogPost)
 	priv.GET("/posts/all", c.ServeBlogDirectory)
 	priv.GET("/posts", c.ServeNewBlogPage)
 	priv.PATCH("/posts", c.UpdateBlogPost)
+	priv.DELETE("/posts/:id", c.DeleteDocument)
 
 }

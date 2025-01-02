@@ -50,7 +50,7 @@ func main() {
 		"login",
 		"admin",
 		"blogpost_editor",
-		"new_blogpost",
+		"post_options",
 		"unhandled_error",
 		"upload",
 		"upload_status",
