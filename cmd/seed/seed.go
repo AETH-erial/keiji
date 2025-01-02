@@ -15,7 +15,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const DEFAULT_URL = "http://localhost:10277"
+const DEFAULT_URL = "http://horus-ctn01.void:10277"
 
 // authenticate and get the cookie needed to make updates
 func auth() string {
@@ -39,6 +39,33 @@ func main() {
 
 	client := http.Client{}
 	switch cmd {
+	case "asset":
+		b, err := os.ReadFile(pngFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, fileName := path.Split(pngFile)
+		item := helpers.Asset{
+			Name: fileName,
+			Data: b,
+		}
+		data, _ := json.Marshal(item)
+		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/asset", DEFAULT_URL), bytes.NewReader(data))
+		req.Header.Add("Content-Type", "application/json")
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Println("There was an error performing the desired request: ", err.Error())
+			os.Exit(1)
+		}
+		if resp.StatusCode > 200 {
+			defer resp.Body.Close()
+			b, _ := io.ReadAll(resp.Body)
+			fmt.Println("There was an error performing the desired request: ", string(b))
+			os.Exit(2)
+		}
+		fmt.Println("navigation bar item upload successfully.")
+		os.Exit(0)
+
 	case "png":
 		fmt.Println(string(pngFile))
 		b, err := os.ReadFile(pngFile)

@@ -27,6 +27,7 @@ func Register(e *gin.Engine, domain string, redisPort string, redisAddr string, 
 	priv.Use(c.IsAuthenticated)
 	priv.GET("/upload", c.ServeFileUpload)
 	priv.POST("/upload", c.SaveFile)
+	priv.POST("/asset", c.AddAsset)
 	priv.GET("/panel", c.AdminPanel)
 	priv.POST("/panel", c.AddAdminTableEntry)
 	priv.POST("/menu", c.AddMenuItem)

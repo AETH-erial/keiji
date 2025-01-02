@@ -88,6 +88,7 @@ type DocumentIO interface {
 	DeleteDocument(id Identifier) error
 	AddDocument(doc Document) error
 	AddImage(data []byte, title, desc string) error
+	AddAsset(name string, data []byte) error
 	AddAdminTableEntry(TableData, string) error
 	AddNavbarItem(NavBarItem) error
 	AddMenuItem(MenuLinkPair) error
@@ -508,11 +509,6 @@ func (s *SQLiteRepo) AddNavbarItem(item NavBarItem) error {
 		return err
 	}
 	_, err = stmt.Exec(item.Png, item.Link, item.Redirect)
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	err = s.AddAsset(item.Link, item.Png)
 	if err != nil {
 		tx.Rollback()
 		return err

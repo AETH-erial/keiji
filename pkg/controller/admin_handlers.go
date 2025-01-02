@@ -138,7 +138,41 @@ func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 		})
 		return
 	}
+
+	err = c.database.AddAsset(item.Link, item.Png)
+	if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+
 	ctx.Data(200, "text", []byte("navbar item added."))
+}
+
+/*
+@Name AddAsset
+@Summary add an asset to the db
+@Tags admin
+@Router /admin/assets
+*/
+func (c *Controller) AddAsset(ctx *gin.Context) {
+	var item helpers.Asset
+	err := ctx.ShouldBind(&item)
+	if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+	err = c.database.AddAsset(item.Name, item.Data)
+	if err != nil {
+		ctx.JSON(400, map[string]string{
+			"Error": err.Error(),
+		})
+		return
+	}
+
 }
 
 // @Name AdminPanel
