@@ -512,6 +512,11 @@ func (s *SQLiteRepo) AddNavbarItem(item NavBarItem) error {
 		tx.Rollback()
 		return err
 	}
+	err = s.AddAsset(item.Link, item.Png)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 	tx.Commit()
 	return nil
 

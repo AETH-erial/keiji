@@ -15,7 +15,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const DEFAULT_URL = "http://localhost:8080"
+const DEFAULT_URL = "http://localhost:10277"
 
 // authenticate and get the cookie needed to make updates
 func auth() string {
