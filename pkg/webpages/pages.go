@@ -52,7 +52,6 @@ Implementing the io.FS interface for interoperability
 */
 func (f FilesystemWebpages) Open(file string) (fs.File, error) {
 	filePath := path.Join(os.Getenv("WEB_ROOT"), file)
-	fmt.Println(filePath)
 	fh, err := os.Open(filePath)
 	if err != nil {
 		fmt.Printf("Error opening the file: %s because %s", filePath, err)

@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,12 +15,12 @@ import (
 Serves the admin panel with all of the documents in each blog category for editing
 */
 func (c *Controller) ServeBlogDirectory(ctx *gin.Context) {
-	tableData := helpers.AdminPage{Tables: map[string][]helpers.TableData{}}
-	for i := range helpers.Topics {
-		docs := c.database.GetByCategory(helpers.Topics[i])
+	tableData := storage.AdminPage{Tables: map[string][]storage.TableData{}}
+	for i := range storage.Topics {
+		docs := c.database.GetByCategory(storage.Topics[i])
 		for z := range docs {
-			tableData.Tables[helpers.Topics[i]] = append(tableData.Tables[helpers.Topics[i]],
-				helpers.TableData{
+			tableData.Tables[storage.Topics[i]] = append(tableData.Tables[storage.Topics[i]],
+				storage.TableData{
 					DisplayName: docs[z].Title,
 					Link:        fmt.Sprintf("/admin/options/%s", docs[z].Ident),
 				},
@@ -49,7 +49,7 @@ func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
 		})
 		return
 	}
-	doc, err := c.database.GetDocument(helpers.Identifier(post))
+	doc, err := c.database.GetDocument(storage.Identifier(post))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": err.Error(),
@@ -62,7 +62,7 @@ func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
 			"headers": c.database.GetNavBarLinks(),
 		},
 		"Ident":        doc.Ident,
-		"Topics":       helpers.Topics,
+		"Topics":       storage.Topics,
 		"Title":        doc.Title,
 		"DefaultTopic": doc.Category,
 		"Created":      doc.Created,
@@ -74,7 +74,7 @@ func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
 Update an existing blog post
 */
 func (c *Controller) UpdateBlogPost(ctx *gin.Context) {
-	var doc helpers.Document
+	var doc storage.Document
 
 	err := ctx.ShouldBind(&doc)
 	if err != nil {
@@ -101,7 +101,7 @@ func (c *Controller) ServeNewBlogPage(ctx *gin.Context) {
 			"headers": c.database.GetNavBarLinks(),
 		},
 		"Post":    true,
-		"Topics":  helpers.Topics,
+		"Topics":  storage.Topics,
 		"Created": time.Now().UTC().String(),
 	})
 }
@@ -110,7 +110,7 @@ func (c *Controller) ServeNewBlogPage(ctx *gin.Context) {
 Reciever for the ServeNewBlogPage UI screen. Adds a new document to the database
 */
 func (c *Controller) MakeBlogPost(ctx *gin.Context) {
-	var doc helpers.Document
+	var doc storage.Document
 	err := ctx.ShouldBind(&doc)
 	if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
@@ -141,7 +141,7 @@ func (c *Controller) ServeFileUpload(ctx *gin.Context) {
 Reciever for the page served to created a new visual media post
 */
 func (c *Controller) SaveFile(ctx *gin.Context) {
-	var img helpers.Image
+	var img storage.Image
 	err := ctx.ShouldBind(&img)
 	if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
@@ -202,7 +202,7 @@ func (c *Controller) DeleteDocument(ctx *gin.Context) {
 		return
 
 	}
-	err := c.database.DeleteDocument(helpers.Identifier(id))
+	err := c.database.DeleteDocument(storage.Identifier(id))
 	if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": "Delete Failed!", "Color": "red"})
 		return

@@ -4,9 +4,28 @@ import (
 	"html/template"
 	"net/http"
 
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 )
+
+/*
+	 convert markdown to html
+		:param md: the byte array containing the Markdown to convert
+*/
+func MdToHTML(md []byte) []byte {
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+	p := parser.NewWithExtensions(extensions)
+	doc := p.Parse(md)
+
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	opts := html.RendererOptions{Flags: htmlFlags}
+	renderer := html.NewRenderer(opts)
+
+	return markdown.Render(doc, renderer)
+}
 
 // @Name ServePost
 // @Summary serves HTML files out of the HTML directory
@@ -20,14 +39,14 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 		})
 		return
 	}
-	doc, err := c.database.GetDocument(helpers.Identifier(post))
+	doc, err := c.database.GetDocument(storage.Identifier(post))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": err.Error(),
 		})
 		return
 	}
-	if doc.Category == helpers.CONFIGURATION {
+	if doc.Category == storage.CONFIGURATION {
 		ctx.Status(404)
 		return
 	}
@@ -38,7 +57,7 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 		"Title":   doc.Title,
 		"Ident":   doc.Ident,
 		"Created": doc.Created,
-		"Body":    template.HTML(helpers.MdToHTML([]byte(doc.Body))),
+		"Body":    template.HTML(MdToHTML([]byte(doc.Body))),
 		"menu":    c.database.GetDropdownElements(),
 	})
 
@@ -49,10 +68,10 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 // @Tags webpages
 // @Router / [get]
 func (c *Controller) ServeHome(ctx *gin.Context) {
-	home := c.database.GetByCategory(helpers.HOMEPAGE)
-	var content helpers.Document
+	home := c.database.GetByCategory(storage.HOMEPAGE)
+	var content storage.Document
 	if len(home) == 0 {
-		content = helpers.Document{
+		content = storage.Document{
 			Body: "Under construction. Sry :(",
 		}
 	} else {
@@ -72,7 +91,7 @@ func (c *Controller) ServeHome(ctx *gin.Context) {
 // @Tags webpages
 // @Router /blog [get]
 func (c *Controller) ServeBlog(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(helpers.BLOG))
+	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(storage.BLOG))
 }
 
 // @Name ServeCreative
@@ -80,7 +99,7 @@ func (c *Controller) ServeBlog(ctx *gin.Context) {
 // @Tags webpages
 // @Router /creative [get]
 func (c *Controller) ServeCreative(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(helpers.CREATIVE))
+	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(storage.CREATIVE))
 }
 
 // @Name ServeDigitalArt

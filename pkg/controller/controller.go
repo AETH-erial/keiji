@@ -3,18 +3,20 @@ package controller
 import (
 	"io/fs"
 
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/auth"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 )
 
 type Controller struct {
 	Domain   string
-	database helpers.DocumentIO
-	Cache    *helpers.AuthCache
+	database storage.DocumentIO
+	Cache    *auth.AuthCache
 	FileIO   fs.FS
 }
 
-func NewController(domain string, database helpers.DocumentIO, files fs.FS) *Controller {
-	return &Controller{Cache: helpers.NewCache(),
+func NewController(domain string, database storage.DocumentIO, files fs.FS) *Controller {
+	return &Controller{
+		Cache:    auth.NewCache(),
 		Domain:   domain,
 		database: database,
 		FileIO:   files,

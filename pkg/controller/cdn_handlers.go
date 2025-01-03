@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,7 +23,7 @@ func (c *Controller) ServeImage(ctx *gin.Context) {
 			"Error": "the requested file could not be found",
 		})
 	}
-	css := fmt.Sprintf("%s/%s", helpers.GetImageStore(), f)
+	css := fmt.Sprintf("%s/%s", storage.GetImageStore(), f)
 	b, err := os.ReadFile(css)
 	if err != nil {
 		ctx.JSON(500, map[string]string{

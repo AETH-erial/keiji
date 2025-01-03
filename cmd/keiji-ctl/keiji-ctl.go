@@ -12,15 +12,16 @@ import (
 	"os"
 	"path"
 
+	"git.aetherial.dev/aeth/keiji/pkg/auth"
 	"git.aetherial.dev/aeth/keiji/pkg/controller"
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // authenticate and get the cookie needed to make updates
-func auth(url, username, password string) *http.Cookie {
+func authenticate(url, username, password string) *http.Cookie {
 	client := http.Client{}
-	b, _ := json.Marshal(helpers.Credentials{Username: username, Password: password})
+	b, _ := json.Marshal(auth.Credentials{Username: username, Password: password})
 	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(b))
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
@@ -82,7 +83,7 @@ func main() {
 
 	switch cmd {
 	case "auth":
-		cookie := auth(fmt.Sprintf("%s/login", address), os.Getenv("KEIJI_USERNAME"), os.Getenv("KEIJI_PASSWORD"))
+		cookie := authenticate(fmt.Sprintf("%s/login", address), os.Getenv("KEIJI_USERNAME"), os.Getenv("KEIJI_PASSWORD"))
 		fmt.Println(cookie.Value)
 
 	case "asset":
@@ -91,7 +92,7 @@ func main() {
 			log.Fatal(err)
 		}
 		_, fileName := path.Split(pngFile)
-		item := helpers.Asset{
+		item := storage.Asset{
 			Name: fileName,
 			Data: b,
 		}
@@ -121,7 +122,7 @@ func main() {
 		}
 		_, fileName := path.Split(pngFile)
 		fmt.Println(fileName)
-		item := helpers.NavBarItem{
+		item := storage.NavBarItem{
 			Link:     fileName,
 			Redirect: redirect,
 			Png:      b,
@@ -144,7 +145,7 @@ func main() {
 		fmt.Println("png item upload successfully.")
 		os.Exit(0)
 	case "menu":
-		b, _ := json.Marshal(helpers.MenuLinkPair{LinkText: text, MenuLink: redirect})
+		b, _ := json.Marshal(storage.LinkPair{Text: text, Link: redirect})
 		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/menu", address), bytes.NewReader(b))
 		req.AddCookie(prepareCookie(address))
 		req.Header.Add("Content-Type", "application/json")
@@ -162,9 +163,9 @@ func main() {
 		fmt.Println("menu item uploaded successfully.")
 		os.Exit(0)
 	case "admin":
-		tables := make(map[string][]helpers.TableData)
-		adminPage := helpers.AdminPage{Tables: tables}
-		adminPage.Tables[col] = append(adminPage.Tables[col], helpers.TableData{Link: redirect, DisplayName: text})
+		tables := make(map[string][]storage.TableData)
+		adminPage := storage.AdminPage{Tables: tables}
+		adminPage.Tables[col] = append(adminPage.Tables[col], storage.TableData{Link: redirect, DisplayName: text})
 		b, _ := json.Marshal(adminPage)
 		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/panel", address), bytes.NewReader(b))
 		req.AddCookie(prepareCookie(address))

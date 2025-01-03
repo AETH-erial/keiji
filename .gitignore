@@ -1,15 +1,14 @@
 # ignoring environment variable file
 *.env
+*.env.template
 
 # everything in the build directory
-build/linux/webserver/*
-build/linux/seed/*
+build/linux/keiji/*
+build/linux/keiji-ctl/*
 
 html/assets/images/*
 html/
 
-# db seed data
-db_seed/*
 
 sqlite.db
 

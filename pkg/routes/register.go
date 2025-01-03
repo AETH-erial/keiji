@@ -4,11 +4,11 @@ import (
 	"io/fs"
 
 	"git.aetherial.dev/aeth/keiji/pkg/controller"
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
 )
 
-func Register(e *gin.Engine, domain string, database helpers.DocumentIO, files fs.FS) {
+func Register(e *gin.Engine, domain string, database storage.DocumentIO, files fs.FS) {
 	c := controller.NewController(domain, database, files)
 	web := e.Group("")
 	web.GET("/", c.ServeHome)

@@ -1,4 +1,4 @@
-package helpers
+package storage
 
 import (
 	"database/sql"
@@ -15,6 +15,20 @@ import (
 	"github.com/google/uuid"
 )
 
+const TECHNICAL = "technical"
+const CONFIGURATION = "configuration"
+const BLOG = "blog"
+const CREATIVE = "creative"
+const DIGITAL_ART = "digital_art"
+const HOMEPAGE = "homepage"
+
+var Topics = []string{
+	TECHNICAL,
+	BLOG,
+	CREATIVE,
+	HOMEPAGE,
+}
+
 type DatabaseSchema struct {
 	// Gotta figure out what this looks like
 	// so that the ExtractAll() function gets
@@ -22,9 +36,23 @@ type DatabaseSchema struct {
 
 }
 
-type MenuLinkPair struct {
-	MenuLink string `json:"link"`
-	LinkText string `json:"text"`
+type MenuElement struct {
+	Png       string     `json:"png"`
+	Category  string     `json:"category"`
+	MenuLinks []LinkPair `json:"menu_links"`
+}
+type AdminPage struct {
+	Tables map[string][]TableData `json:"tables"`
+}
+
+type TableData struct { // TODO: add this to the database io interface
+	DisplayName string `json:"display_name"`
+	Link        string `json:"link"`
+}
+
+type LinkPair struct {
+	Link string `json:"link"`
+	Text string `json:"text"`
 }
 
 type NavBarItem struct {
@@ -89,10 +117,10 @@ type DocumentIO interface {
 	AddAsset(name string, data []byte) error
 	AddAdminTableEntry(TableData, string) error
 	AddNavbarItem(NavBarItem) error
-	AddMenuItem(MenuLinkPair) error
+	AddMenuItem(LinkPair) error
 	GetByCategory(category string) []Document
 	AllDocuments() []Document
-	GetDropdownElements() []MenuLinkPair
+	GetDropdownElements() []LinkPair
 	GetNavBarLinks() []NavBarItem
 	GetAssets() []Asset
 	GetAdminTables() AdminPage
@@ -198,7 +226,7 @@ func (s *SQLiteRepo) Seed(menu string, pngs string, dir string) { // TODO: make 
 			continue
 		}
 		info := strings.Split(entries[i], "=")
-		err := s.AddMenuItem(MenuLinkPair{MenuLink: info[0], LinkText: info[1]})
+		err := s.AddMenuItem(LinkPair{Link: info[0], Text: info[1]})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -241,16 +269,16 @@ func (s *SQLiteRepo) Seed(menu string, pngs string, dir string) { // TODO: make 
 }
 
 /*
-Get all dropdown menu elements. Returns a list of MenuLinkPair structs with the text and redirect location
+Get all dropdown menu elements. Returns a list of LinkPair structs with the text and redirect location
 */
-func (s *SQLiteRepo) GetDropdownElements() []MenuLinkPair {
+func (s *SQLiteRepo) GetDropdownElements() []LinkPair {
 	rows, err := s.db.Query("SELECT * FROM menu")
-	var menuItems []MenuLinkPair
+	var menuItems []LinkPair
 	defer rows.Close()
 	for rows.Next() {
 		var id int
-		var item MenuLinkPair
-		err = rows.Scan(&id, &item.MenuLink, &item.LinkText)
+		var item LinkPair
+		err = rows.Scan(&id, &item.Link, &item.Text)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -471,17 +499,17 @@ func (s *SQLiteRepo) UpdateDocument(doc Document) error {
 }
 
 /*
-Adds a MenuLinkPair to the menu database table
+Adds a LinkPair to the menu database table
 
-	:param item: the MenuLinkPair to upload
+	:param item: the LinkPair to upload
 */
-func (s *SQLiteRepo) AddMenuItem(item MenuLinkPair) error {
+func (s *SQLiteRepo) AddMenuItem(item LinkPair) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
 	}
 	stmt, _ := tx.Prepare("INSERT INTO menu(link, text) VALUES (?,?)")
-	_, err = stmt.Exec(item.MenuLink, item.LinkText)
+	_, err = stmt.Exec(item.Link, item.Text)
 	if err != nil {
 		tx.Rollback()
 		return err

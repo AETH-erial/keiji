@@ -3,7 +3,8 @@ package controller
 import (
 	"net/http"
 
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/auth"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -27,11 +28,11 @@ func (c *Controller) ServeLogin(ctx *gin.Context) {
 // @Name Auth
 // @Summary serves recieves admin user and pass, sets a cookie
 // @Tags admin
-// @Param cred body helpers.Credentials true "Admin Credentials"
+// @Param cred body storage.Credentials true "Admin Credentials"
 // @Router /login [post]
 func (c *Controller) Auth(ctx *gin.Context) {
 
-	var cred helpers.Credentials
+	var cred auth.Credentials
 
 	err := ctx.ShouldBind(&cred)
 	if err != nil {
@@ -40,7 +41,7 @@ func (c *Controller) Auth(ctx *gin.Context) {
 		})
 		return
 	}
-	cookie, err := helpers.Authorize(&cred, c.Cache)
+	cookie, err := auth.Authorize(&cred, c.Cache)
 	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),
@@ -66,8 +67,8 @@ func (c *Controller) Auth(ctx *gin.Context) {
 @Router /admin/panel
 */
 func (c *Controller) AddAdminTableEntry(ctx *gin.Context) {
-	tables := make(map[string][]helpers.TableData)
-	adminPage := helpers.AdminPage{Tables: tables}
+	tables := make(map[string][]storage.TableData)
+	adminPage := storage.AdminPage{Tables: tables}
 	err := ctx.ShouldBind(&adminPage)
 	if err != nil {
 		ctx.JSON(400, map[string]string{
@@ -97,7 +98,7 @@ func (c *Controller) AddAdminTableEntry(ctx *gin.Context) {
 @Router /admin/menu
 */
 func (c *Controller) AddMenuItem(ctx *gin.Context) {
-	var item helpers.MenuLinkPair
+	var item storage.LinkPair
 	err := ctx.ShouldBind(&item)
 	if err != nil {
 		ctx.JSON(400, map[string]string{
@@ -123,7 +124,7 @@ func (c *Controller) AddMenuItem(ctx *gin.Context) {
 */
 func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 
-	var item helpers.NavBarItem
+	var item storage.NavBarItem
 	err := ctx.ShouldBind(&item)
 	if err != nil {
 		ctx.JSON(400, map[string]string{
@@ -157,7 +158,7 @@ func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 @Router /admin/assets
 */
 func (c *Controller) AddAsset(ctx *gin.Context) {
-	var item helpers.Asset
+	var item storage.Asset
 	err := ctx.ShouldBind(&item)
 	if err != nil {
 		ctx.JSON(400, map[string]string{
