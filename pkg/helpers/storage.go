@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,7 +13,6 @@ import (
 
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 )
 
 type DatabaseSchema struct {
@@ -673,35 +671,4 @@ func GetImageStore() string {
 // Wrapping the new id call in a function to make refactoring easier
 func newIdentifier() Identifier {
 	return Identifier(uuid.NewString())
-}
-
-/*
-Return database entries of the images that exist in the imagestore
-
-	:param rds: pointer to a RedisCaller to perform the lookups with
-*/
-func GetImageData(rds *RedisCaller) ([]*ImageStoreItem, error) {
-	ids, err := rds.GetByCategory(DIGITAL_ART)
-	if err != nil {
-		return nil, err
-	}
-
-	var imageEntries []*ImageStoreItem
-	for i := range ids {
-		val, err := rds.Client.Get(rds.ctx, ids[i]).Result()
-		if err == redis.Nil {
-			return nil, err
-		} else if err != nil {
-			return nil, err
-		}
-		data := []byte(val)
-		var imageEntry ImageStoreItem
-		err = json.Unmarshal(data, &imageEntry)
-		if err != nil {
-			return nil, err
-		}
-		imageEntry.ApiPath = fmt.Sprintf("/api/v1/images/%s", imageEntry.Filename)
-		imageEntries = append(imageEntries, &imageEntry)
-	}
-	return imageEntries, err
 }

@@ -7,19 +7,15 @@ import (
 )
 
 type Controller struct {
-	Domain      string
-	database    helpers.DocumentIO
-	RedisConfig helpers.RedisConf
-	Cache       *helpers.AllCache
-	FileIO      fs.FS
+	Domain   string
+	database helpers.DocumentIO
+	Cache    *helpers.AuthCache
+	FileIO   fs.FS
 }
 
-func NewController(domain string, redisPort string, redisAddr string, database helpers.DocumentIO, files fs.FS) *Controller {
+func NewController(domain string, database helpers.DocumentIO, files fs.FS) *Controller {
 	return &Controller{Cache: helpers.NewCache(),
-		Domain: domain, RedisConfig: helpers.RedisConf{
-			Port: redisPort,
-			Addr: redisAddr,
-		},
+		Domain:   domain,
 		database: database,
 		FileIO:   files,
 	}

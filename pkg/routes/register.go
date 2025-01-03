@@ -8,12 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Register(e *gin.Engine, domain string, redisPort string, redisAddr string, database helpers.DocumentIO, files fs.FS) {
-	c := controller.NewController(domain, redisPort, redisAddr, database, files)
+func Register(e *gin.Engine, domain string, database helpers.DocumentIO, files fs.FS) {
+	c := controller.NewController(domain, database, files)
 	web := e.Group("")
 	web.GET("/", c.ServeHome)
 	web.GET("/blog", c.ServeBlog)
 	web.GET("/digital", c.ServeDigitalArt)
+	web.GET("/creative", c.ServeCreative)
 	web.GET("/writing/:id", c.ServePost)
 	web.GET("/login", c.ServeLogin)
 	web.POST("/login", c.Auth)

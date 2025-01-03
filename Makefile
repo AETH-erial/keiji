@@ -1,14 +1,17 @@
 .PHONY: build format docs
 
 
-WEBSERVER = webserver
-SEED_CMD = seed
+WEBSERVER = keiji
+SEED_CMD = keiji-ctl
 SWAG := $(shell command -v swag 2> /dev/null)
 ## Have to set the WEB_ROOT and DOMAIN_NAME environment variables when building
 build:
 	go build -ldflags " -X main.DOMAIN_NAME=$(DOMAIN_NAME)" \
 	-o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go && \
 	go build -o ./build/linux/$(SEED_CMD)/$(SEED_CMD) ./cmd/$(SEED_CMD)/$(SEED_CMD).go
+
+install:
+	sudo cp ./build/linux/$(SEED_CMD)/$(SEED_CMD) /usr/local/bin/
 
 format:
 	go fmt ./...

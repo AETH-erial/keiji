@@ -3,7 +3,6 @@ package controller
 import (
 	"html/template"
 	"net/http"
-	
 
 	"git.aetherial.dev/aeth/keiji/pkg/helpers"
 	"github.com/gin-gonic/gin"
@@ -50,12 +49,21 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 // @Tags webpages
 // @Router / [get]
 func (c *Controller) ServeHome(ctx *gin.Context) {
+	home := c.database.GetByCategory(helpers.HOMEPAGE)
+	var content helpers.Document
+	if len(home) == 0 {
+		content = helpers.Document{
+			Body: "Under construction. Sry :(",
+		}
+	} else {
+		content = home[0]
+	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
 			"headers": c.database.GetNavBarLinks(),
 		},
-		"menu":     c.database.GetDropdownElements(),
-		"listings": c.database.GetByCategory(helpers.BLOG),
+		"menu":    c.database.GetDropdownElements(),
+		"default": content,
 	})
 }
 
@@ -67,6 +75,13 @@ func (c *Controller) ServeBlog(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(helpers.BLOG))
 }
 
+// @Name ServeCreative
+// @Summary serves the HTML for the creative writing listings
+// @Tags webpages
+// @Router /creative [get]
+func (c *Controller) ServeCreative(ctx *gin.Context) {
+	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(helpers.CREATIVE))
+}
 
 // @Name ServeDigitalArt
 // @Summary serves the HTML file for the digital art homepage
@@ -74,17 +89,6 @@ func (c *Controller) ServeBlog(ctx *gin.Context) {
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
 	images := c.database.GetAllImages()
-	/*
-	if err != nil {
-		ctx.HTML(http.StatusInternalServerError, "unhandled_error",
-			gin.H{
-				"StatusCode": http.StatusInternalServerError,
-				"Reason":     err.Error(),
-			},
-		)
-		return
-	}
-	*/
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
 			"headers": c.database.GetNavBarLinks(),
