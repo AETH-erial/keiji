@@ -1,0 +1,28 @@
+{{ define "admin" }}
+<!DOCTYPE html>
+<html lang="en">
+    <div class="container-fluid row">
+        {{ range $key, $value := .Tables }}
+            <div class="col">
+                <div class="col container h-2 p-2" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">{{ $key }}
+                </div>
+                    <table class="table table-dark table-hover">
+                        <thead>
+                        </thead>
+                            <tbody>
+                            {{ range $value }}
+                                <tr>
+                                    <div class="container">
+                                        <div class="row">
+                                        <button class="btn-primary" hx-get="{{ .Link }}" hx-swap="outerHTML" scope="row" style="color: white; height: fit-content; font-size: larger; font-family: monospace;">{{ .DisplayName }}</button>
+                                        </div>
+                                    </div>
+                                </tr>
+                            {{ end }}
+                            </tbody>
+                    </table>
+                </div>
+            {{ end }}
+    </div>
+</html>
+{{ end }}

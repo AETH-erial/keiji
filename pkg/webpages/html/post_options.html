@@ -1,0 +1,15 @@
+{{ define "post_options" }}
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <button class="btn-primary" hx-delete="{{ .Link }}" hx-swap="innerHTML" scope="row" style="color: white; height: fit-content; font-size: larger; font-family: monospace;">Delete</button>
+        </div>
+        <div class="col">
+            <button class="btn-primary" hx-get="{{ .Link }}" hx-target="#main" scope="row" style="color: white; height: fit-content; font-size: larger; font-family: monospace;">Modify</button>
+        </div>
+    </div>
+</div>
+
+
+
+{{ end }}
