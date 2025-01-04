@@ -1,13 +1,17 @@
 package env
 
 import (
+	"bytes"
 	"fmt"
-	"log"
+	"io"
 	"os"
+	"sort"
 
 	"github.com/joho/godotenv"
 )
 
+const KEIJI_USERNAME = "KEIJI_USERNAME"
+const KEIJI_PASSWORD = "KEIJI_PASSWORD"
 const IMAGE_STORE = "IMAGE_STORE"
 const WEB_ROOT = "WEB_ROOT"
 const DOMAIN_NAME = "DOMAIN_NAME"
@@ -25,10 +29,12 @@ var OPTION_VARS = map[string]string{
 }
 
 var REQUIRED_VARS = map[string]string{
-	HOST_PORT:   "#the port to run the server on (int)",
-	HOST_ADDR:   "#the address for the server to listen on (string)",
-	DOMAIN_NAME: "#the servers domain name, i.e. 'aetherial.dev', or 'localhost' (string)",
-	SSL_MODE:    "#chose to use SSL or not (boolean)",
+	HOST_PORT:      "#the port to run the server on (int)",
+	HOST_ADDR:      "#the address for the server to listen on (string)",
+	DOMAIN_NAME:    "#the servers domain name, i.e. 'aetherial.dev', or 'localhost' (string)",
+	SSL_MODE:       "#chose to use SSL or not (boolean)",
+	KEIJI_USERNAME: "#the administrator username to login with",
+	KEIJI_PASSWORD: "#the password for the administrator accounit",
 }
 
 type EnvNotSet struct {
@@ -45,21 +51,41 @@ optional configuration (commented out)
 
 	:param path: the path to write the template to
 */
-func WriteTemplate(path string) {
+func WriteTemplate(wtr io.Writer) error {
+
+	outReqArr := make([]string, len(REQUIRED_VARS))
+	outOptVar := make([]string, len(OPTION_VARS))
+	i := 0
+	for k := range REQUIRED_VARS {
+		outReqArr[i] = k
+		i++
+	}
+	i = 0
+	for k := range OPTION_VARS {
+		outOptVar[i] = k
+		i++
+	}
+	sort.Strings(outReqArr)
+	sort.Strings(outOptVar)
+
 	var out string
 	out = out + "####### Required Configuration #######\n"
-	for k, v := range REQUIRED_VARS {
+	for i := range outReqArr {
+		k := REQUIRED_VARS[outReqArr[i]]
+		v := outReqArr[i]
+		fmt.Println(k, v)
 		out = out + fmt.Sprintf("%s\n%s=\n", v, k)
 	}
 	out = out + "\n####### Optional Configuration #######\n"
-	for k, v := range OPTION_VARS {
-		out = out + fmt.Sprintf("# %s\n# %s=\n", v, k)
+	for i := range outOptVar {
+		out = out + fmt.Sprintf("# %s\n# %s=\n", OPTION_VARS[outOptVar[i]], outOptVar[i])
 	}
-	err := os.WriteFile(path, []byte(out), os.ModePerm)
+	msg := []byte(out)
+	_, err := io.Copy(wtr, bytes.NewBuffer(msg))
 	if err != nil {
-		log.Fatal("Failed to write file: ", err)
+		return err
 	}
-
+	return nil
 }
 
 /*

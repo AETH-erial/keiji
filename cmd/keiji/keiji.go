@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
 
+	"git.aetherial.dev/aeth/keiji/pkg/auth"
 	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"git.aetherial.dev/aeth/keiji/pkg/routes"
 	"git.aetherial.dev/aeth/keiji/pkg/storage"
@@ -34,7 +35,12 @@ func main() {
 	flag.BoolVar(&blank, "blank", false, "create a blank .env template")
 	flag.Parse()
 	if blank {
-		env.WriteTemplate(".env.template")
+		fh, err := os.OpenFile(".env.template", os.O_CREATE|os.O_RDWR, os.ModePerm)
+		if err != nil {
+			log.Fatal("Couldnt open file .env.template, error: ", err)
+		}
+		defer fh.Close()
+		env.WriteTemplate(fh)
 		fmt.Println("Blank template written to: .env.template")
 		os.Exit(0)
 	}
@@ -92,7 +98,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	routes.Register(e, os.Getenv("DOMAIN_NAME"), webserverDb, htmlReader)
+	routes.Register(e, os.Getenv("DOMAIN_NAME"), webserverDb, htmlReader, auth.EnvAuth{})
 	ssl, err := strconv.ParseBool(os.Getenv("USE_SSL"))
 	if err != nil {
 		log.Fatal("Invalid option passed to USE_SSL: ", os.Getenv("USE_SSL"))

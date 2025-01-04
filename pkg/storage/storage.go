@@ -208,67 +208,6 @@ func (r *SQLiteRepo) Migrate() error {
 }
 
 /*
-Seed the database with the necessary configuration items to function properly
-
-	:param menu: the text file containing the k/v pair for the navigation menu
-	:param pngs: the text file containing the k/v pair for the icon names -> redirect links
-	:param dir: the directory that the PNG assets are in (note: the k/v pair in pngs will read from this dir)
-*/
-func (s *SQLiteRepo) Seed(menu string, pngs string, dir string) { // TODO: make a bootstrap file with a comprehensive unmarshalling sequence for tighter control of the seeing procedute
-	b, err := os.ReadFile(menu)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	entries := strings.Split(string(b), "\n")
-	for i := range entries {
-		if entries[i] == "" {
-			continue
-		}
-		info := strings.Split(entries[i], "=")
-		err := s.AddMenuItem(LinkPair{Link: info[0], Text: info[1]})
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	b, err = os.ReadFile(pngs)
-	if err != nil {
-		log.Fatal(err)
-	}
-	entries = strings.Split(string(b), "\n")
-	for i := range entries {
-		if entries[i] == "" {
-			continue
-		}
-		info := strings.Split(entries[i], "=")
-		b, err := os.ReadFile(path.Join(dir, info[0]))
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = s.AddNavbarItem(NavBarItem{Png: b, Link: info[0], Redirect: info[1]})
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	assets, err := os.ReadDir(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for i := range assets {
-		b, err := os.ReadFile(path.Join(dir, assets[i].Name()))
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = s.AddAsset(assets[i].Name(), b)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-	}
-
-}
-
-/*
 Get all dropdown menu elements. Returns a list of LinkPair structs with the text and redirect location
 */
 func (s *SQLiteRepo) GetDropdownElements() []LinkPair {
@@ -406,10 +345,7 @@ get image data from the images table
 func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	row := s.db.QueryRow("SELECT * FROM images WHERE id = ?", id)
 	var rowNum int
-	var title string
-	var location string
-	var desc string
-	var created string
+	var title, location, desc, created string
 	if err := row.Scan(&rowNum, &title, &location, &desc, &created); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Image{}, ErrNotExists
@@ -666,26 +602,6 @@ type ImageStoreItem struct {
 	Desc         string `json:"description" form:"description"`
 	Category     string `json:"category"`
 	ApiPath      string
-}
-
-/*
-Create a new ImageStoreItem
-
-	:param fname: the name of the file to be saved
-	:param title: the canonical title to give the image
-	:param desc: the description to associate to the image
-*/
-func NewImageStoreItem(title string, desc string) Image {
-	id := newIdentifier()
-	img := Image{
-		Ident:    id,
-		Title:    title,
-		Category: DIGITAL_ART,
-		Location: GetImageStore(),
-		Created:  time.Now().UTC().String(),
-		Desc:     desc,
-	}
-	return img
 }
 
 /*

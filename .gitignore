@@ -14,3 +14,7 @@ sqlite.db
 # ignoring nohup.out file
 nohup.out
 
+coverage/
+
+
+

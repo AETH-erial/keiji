@@ -41,7 +41,7 @@ func (c *Controller) Auth(ctx *gin.Context) {
 		})
 		return
 	}
-	cookie, err := auth.Authorize(&cred, c.Cache)
+	cookie, err := auth.Authorize(&cred, c.Cache, c.AuthSource)
 	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"Error": err.Error(),

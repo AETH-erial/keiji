@@ -8,17 +8,19 @@ import (
 )
 
 type Controller struct {
-	Domain   string
-	database storage.DocumentIO
-	Cache    *auth.AuthCache
-	FileIO   fs.FS
+	Domain     string
+	database   storage.DocumentIO
+	Cache      *auth.AuthCache
+	AuthSource auth.Source
+	FileIO     fs.FS
 }
 
-func NewController(domain string, database storage.DocumentIO, files fs.FS) *Controller {
+func NewController(domain string, database storage.DocumentIO, files fs.FS, authSrc auth.Source) *Controller {
 	return &Controller{
-		Cache:    auth.NewCache(),
-		Domain:   domain,
-		database: database,
-		FileIO:   files,
+		Cache:      auth.NewCache(),
+		AuthSource: authSrc,
+		Domain:     domain,
+		database:   database,
+		FileIO:     files,
 	}
 }

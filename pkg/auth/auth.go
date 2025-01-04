@@ -44,17 +44,27 @@ func (c *AuthCache) Read(id string) bool {
 	return ok
 }
 
+type Source interface {
+	AdminUsername() string
+	AdminPassword() string
+}
+
+type EnvAuth struct{}
+
+func (e EnvAuth) AdminUsername() string { return os.Getenv("KEIJI_USERNAME") }
+func (e EnvAuth) AdminPassword() string { return os.Getenv("KEIJI_PASSWORD") }
+
 /*
 Recieve the credentials from frontend and validate them
 
 	:param c: pointer to Credential struct
 */
-func Authorize(c *Credentials, cache *AuthCache) (string, error) {
+func Authorize(c *Credentials, cache *AuthCache, authSrc Source) (string, error) {
 	if c.Username == "" || c.Password == "" {
 		return "", &InvalidCredentials{}
 	}
-	if c.Username == os.Getenv("USERNAME") {
-		if c.Password == os.Getenv("PASSWORD") {
+	if c.Username == authSrc.AdminUsername() {
+		if c.Password == authSrc.AdminPassword() {
 			id := uuid.New()
 			cache.update(id.String(), id.String())
 			return id.String(), nil
