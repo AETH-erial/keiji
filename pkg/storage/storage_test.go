@@ -254,7 +254,6 @@ func TestGetImage(t *testing.T) {
 	}
 	tmp := t.TempDir()
 	testImageLoc := path.Join(tmp, "test.jpg")
-	os.WriteFile(testImageLoc, []byte("abc123xyz098"), os.ModePerm)
 	for _, tc := range []testcase{
 		{
 			seed: Image{
@@ -263,6 +262,7 @@ func TestGetImage(t *testing.T) {
 				Location: testImageLoc,
 				Desc:     "description",
 				Created:  "2024-12-31",
+				Data:     []byte("abc123xyz098"),
 			},
 		},
 	} {
@@ -270,6 +270,7 @@ func TestGetImage(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+		os.WriteFile(tc.seed.Location, tc.seed.Data, os.ModePerm)
 		got, err := testDb.GetImage(tc.seed.Ident)
 		if err != nil {
 			t.Error(err)
@@ -291,19 +292,23 @@ func TestGetAllImages(t *testing.T) {
 					Ident:    Identifier("abc123"),
 					Title:    "xyz098",
 					Location: path.Join(tmp, "1.jpg"),
+					Data:     []byte("abc123xyz098"),
+					Created:  "2024-12-31",
 					Desc:     "description",
 				},
 				{
 					Ident:    Identifier("xyz098"),
 					Title:    "abc123",
 					Location: path.Join(tmp, "2.jpg"),
+					Data:     []byte("abc123xyz098"),
+					Created:  "2024-12-31",
 					Desc:     "description",
 				},
 			},
 		},
 	} {
 		for i := range tc.seed {
-			_, err := db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", tc.seed[i].Ident, tc.seed[1].Title, tc.seed[2].Location, tc.seed[3].Desc, "2024-12-31")
+			_, err := db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", string(tc.seed[i].Ident), tc.seed[i].Title, tc.seed[i].Location, tc.seed[i].Desc, tc.seed[i].Created)
 			if err != nil {
 				t.Error(err)
 			}

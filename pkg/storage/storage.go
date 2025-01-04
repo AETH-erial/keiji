@@ -346,7 +346,7 @@ func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	row := s.db.QueryRow("SELECT * FROM images WHERE id = ?", id)
 	var rowNum int
 	var title, location, desc, created string
-	if err := row.Scan(&rowNum, &title, &location, &desc, &created); err != nil {
+	if err := row.Scan(&rowNum, &id, &title, &location, &desc, &created); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Image{}, ErrNotExists
 		}
@@ -578,7 +578,7 @@ func (s *SQLiteRepo) AllDocuments() []Document {
 	all := []Document{}
 	for rows.Next() {
 		var post Document
-		if err := rows.Scan(&post.Ident, &post.Title, &post.Created, &post.Body, &post.Sample); err != nil {
+		if err := rows.Scan(&post.Row, &post.Ident, &post.Title, &post.Created, &post.Body, &post.Category, &post.Sample); err != nil {
 			fmt.Printf("There was an error getting all documents. %s", err.Error())
 			return nil
 		}
