@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"mime/multipart"
 	"os"
@@ -112,8 +113,8 @@ type DocumentIO interface {
 	GetAllImages() []Image
 	UpdateDocument(doc Document) error
 	DeleteDocument(id Identifier) error
-	AddDocument(doc Document) error
-	AddImage(data []byte, title, desc string) error
+	AddDocument(doc Document) (Identifier, error)
+	AddImage(data []byte, title, desc string) (Identifier, error)
 	AddAsset(name string, data []byte) error
 	AddAdminTableEntry(TableData, string) error
 	AddNavbarItem(NavBarItem) error
@@ -134,70 +135,65 @@ var (
 )
 
 type SQLiteRepo struct {
-	db *sql.DB
+	db      *sql.DB
+	imageIO ImageIO
+}
+
+type ImageIO interface {
+	Put([]byte, Identifier) error
+	Get(Identifier) ([]byte, error)
+}
+
+type FilesystemImageIO struct {
+	RootDir string
+}
+
+/*
+Put a data blob on the filesystem
+
+	:param b: the
+*/
+func (f FilesystemImageIO) Put(b []byte, id Identifier) error {
+	fh, err := os.OpenFile(path.Join(f.RootDir, string(id)), os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer fh.Close()
+	_, err = fh.Write(b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+Get a data blob from the filesystem
+
+	:param id: the identifier of the image to retrieve
+*/
+func (f FilesystemImageIO) Get(id Identifier) ([]byte, error) {
+	fh, err := os.Open(path.Join(f.RootDir, string(id)))
+	if err != nil {
+		return nil, err
+	}
+	b, err := io.ReadAll(fh)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // Instantiate a new SQLiteRepo struct
-func NewSQLiteRepo(db *sql.DB) *SQLiteRepo {
+func NewSQLiteRepo(db *sql.DB, imgIo ImageIO) *SQLiteRepo {
 	return &SQLiteRepo{
-		db: db,
+		db:      db,
+		imageIO: imgIo,
 	}
 
 }
 
 // Creates a new SQL table for text posts
-func (r *SQLiteRepo) Migrate() error {
-	postsTable := `
-    CREATE TABLE IF NOT EXISTS posts(
-        row INTEGER PRIMARY KEY AUTOINCREMENT,
-		id TEXT NOT NULL UNIQUE,
-		title TEXT NOT NULL,
-        created TEXT NOT NULL,
-        body TEXT NOT NULL,
-        category TEXT NOT NULL,
-		sample TEXT NOT NULL
-    );
-    `
-	imagesTable := `
-	CREATE TABLE IF NOT EXISTS images(
-		row INTEGER PRIMARY KEY AUTOINCREMENT,
-		id TEXT NOT NULL,
-		title TEXT NOT NULL,
-		location TEXT NOT NULL,
-		desc TEXT NOT NULL,
-		created TEXT NOT NULL
-	);
-	`
-	menuItemsTable := `
-	CREATE TABLE IF NOT EXISTS menu(
-		row INTEGER PRIMARY KEY AUTOINCREMENT,
-		link TEXT NOT NULL,
-		text TEXT NOT NULL
-	);
-	`
-	navbarItemsTable := `
-	CREATE TABLE IF NOT EXISTS navbar(
-		row INTEGER PRIMARY KEY AUTOINCREMENT,
-		png BLOB NOT NULL,
-		link TEXT NOT NULL,
-		redirect TEXT
-	);`
-	assetTable := `
-	CREATE TABLE IF NOT EXISTS assets(
-		row INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		data BLOB NOT NULL
-	);
-	`
-	adminTable := `
-	CREATE TABLE IF NOT EXISTS admin(
-		row INTEGER PRIMARY KEY AUTOINCREMENT,
-		display_name TEXT NOT NULL,
-		link TEXT NOT NULL,
-		category TEXT NOT NULL
-	);
-	`
-	seedQueries := []string{postsTable, imagesTable, menuItemsTable, navbarItemsTable, assetTable, adminTable}
+func (r *SQLiteRepo) Migrate(seedQueries []string) error {
 	for i := range seedQueries {
 		_, err := r.db.Exec(seedQueries[i])
 		if err != nil {
@@ -345,18 +341,18 @@ get image data from the images table
 func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	row := s.db.QueryRow("SELECT * FROM images WHERE id = ?", id)
 	var rowNum int
-	var title, location, desc, created string
-	if err := row.Scan(&rowNum, &id, &title, &location, &desc, &created); err != nil {
+	var title, desc, created string
+	if err := row.Scan(&rowNum, &id, &title, &desc, &created); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Image{}, ErrNotExists
 		}
 		return Image{}, err
 	}
-	data, err := os.ReadFile(location)
+	data, err := s.imageIO.Get(id)
 	if err != nil {
 		return Image{}, err
 	}
-	return Image{Ident: id, Title: title, Location: location, Desc: desc, Data: data, Created: created}, nil
+	return Image{Ident: id, Title: title, Desc: desc, Data: data, Created: created}, nil
 }
 
 /*
@@ -371,15 +367,15 @@ func (s *SQLiteRepo) GetAllImages() []Image {
 	for rows.Next() {
 		var img Image
 		var rowNum int
-		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Location, &img.Desc, &img.Created)
+		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Desc, &img.Created)
 		if err != nil {
 			log.Fatal(err)
 		}
-		b, err := os.ReadFile(img.Location)
+		b, err := s.imageIO.Get(img.Ident)
 		if err != nil {
 			log.Fatal(err)
 		}
-		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Location: img.Location, Desc: img.Desc, Data: b, Created: img.Created})
+		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -396,18 +392,17 @@ Add an image to the database
 	:param desc: the description of the image, if any
 	:param data: the binary data for the image
 */
-func (s *SQLiteRepo) AddImage(data []byte, title string, desc string) error {
+func (s *SQLiteRepo) AddImage(data []byte, title string, desc string) (Identifier, error) {
 	id := newIdentifier()
-	fsLoc := path.Join(GetImageStore(), string(id))
-	err := os.WriteFile(fsLoc, data, os.ModePerm)
+	err := s.imageIO.Put(data, id)
 	if err != nil {
-		return err
+		return Identifier(""), err
 	}
-	_, err = s.db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", string(id), title, fsLoc, desc, time.Now().String())
+	_, err = s.db.Exec("INSERT INTO images (id, title, desc, created) VALUES (?,?,?,?)", string(id), title, desc, time.Now().String())
 	if err != nil {
-		return err
+		return Identifier(""), err
 	}
-	return nil
+	return id, nil
 }
 
 /*
@@ -425,11 +420,17 @@ func (s *SQLiteRepo) UpdateDocument(doc Document) error {
 		tx.Rollback()
 		return err
 	}
-	_, err = stmt.Exec(doc.Title, doc.Body, doc.Category, doc.MakeSample(), doc.Ident)
+
+	res, err := stmt.Exec(doc.Title, doc.Body, doc.Category, doc.MakeSample(), doc.Ident)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+	affected, _ := res.RowsAffected()
+	if affected != 1 {
+		return ErrNotExists
+	}
+
 	tx.Commit()
 	return nil
 }
@@ -506,20 +507,20 @@ Adds a document to the database (for text posts)
 
 	:param doc: the Document to add
 */
-func (s *SQLiteRepo) AddDocument(doc Document) error {
-	id := uuid.New()
+func (s *SQLiteRepo) AddDocument(doc Document) (Identifier, error) {
+	id := newIdentifier()
 	tx, err := s.db.Begin()
 	if err != nil {
-		return err
+		return Identifier(""), err
 	}
 	stmt, _ := tx.Prepare("INSERT INTO posts(id, title, created, body, category, sample) VALUES (?,?,?,?,?,?)")
-	_, err = stmt.Exec(id.String(), doc.Title, doc.Created, doc.Body, doc.Category, doc.MakeSample())
+	_, err = stmt.Exec(id, doc.Title, doc.Created, doc.Body, doc.Category, doc.MakeSample())
 	if err != nil {
 		tx.Rollback()
-		return err
+		return Identifier(""), err
 	}
 	tx.Commit()
-	return nil
+	return id, nil
 
 }
 

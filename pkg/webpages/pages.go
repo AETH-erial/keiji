@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"path"
+
+	"git.aetherial.dev/aeth/keiji/pkg/env"
 )
 
 //go:embed html cdn
@@ -32,7 +34,7 @@ func NewContentLayer(opt ServiceOption) fs.FS {
 	if opt == FILESYSTEM {
 		fmt.Println("Using filesystem to pull html templates")
 
-		return FilesystemWebpages{Webroot: path.Base(os.Getenv("WEB_ROOT"))}
+		return FilesystemWebpages{Webroot: path.Base(os.Getenv(env.WEB_ROOT))}
 	}
 	log.Fatal("Unknown option was passed: ", opt)
 	return content
@@ -51,11 +53,11 @@ type FilesystemWebpages struct {
 Implementing the io.FS interface for interoperability
 */
 func (f FilesystemWebpages) Open(file string) (fs.File, error) {
-	filePath := path.Join(os.Getenv("WEB_ROOT"), file)
+	filePath := path.Join(f.Webroot, file)
 	fh, err := os.Open(filePath)
 	if err != nil {
 		fmt.Printf("Error opening the file: %s because %s", filePath, err)
-		return nil, err
+		return nil, os.ErrNotExist
 	}
 	return fh, nil
 }

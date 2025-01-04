@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"os"
 	"testing"
 
+	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,8 +66,8 @@ func TestAuthorize(t *testing.T) {
 		{
 			desc:          "Auth fails because username is wrong",
 			inputUsername: "admin",
-			inputPassword: "",
-			realUsername:  "admin",
+			inputPassword: "abc123",
+			realUsername:  "superuser",
 			realPassword:  "abc123",
 			expectError:   &InvalidCredentials{},
 		},
@@ -80,4 +82,17 @@ func TestAuthorize(t *testing.T) {
 
 		})
 	}
+}
+
+func TestEnvAuth(t *testing.T) {
+	username := "testuser"
+	password := "testpass"
+	os.Setenv(env.KEIJI_USERNAME, username)
+	os.Setenv(env.KEIJI_PASSWORD, password)
+	defer os.Unsetenv(env.KEIJI_PASSWORD)
+	defer os.Unsetenv(env.KEIJI_PASSWORD)
+	authSrc := EnvAuth{}
+	assert.Equal(t, username, authSrc.AdminUsername())
+	assert.Equal(t, password, authSrc.AdminPassword())
+
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"time"
 
+	"git.aetherial.dev/aeth/keiji/pkg/env"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 )
@@ -51,8 +52,8 @@ type Source interface {
 
 type EnvAuth struct{}
 
-func (e EnvAuth) AdminUsername() string { return os.Getenv("KEIJI_USERNAME") }
-func (e EnvAuth) AdminPassword() string { return os.Getenv("KEIJI_PASSWORD") }
+func (e EnvAuth) AdminUsername() string { return os.Getenv(env.KEIJI_USERNAME) }
+func (e EnvAuth) AdminPassword() string { return os.Getenv(env.KEIJI_PASSWORD) }
 
 /*
 Recieve the credentials from frontend and validate them

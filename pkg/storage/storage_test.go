@@ -2,23 +2,64 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"log"
-	"os"
-	"path"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/assert"
 )
 
-func newTestDb() (*SQLiteRepo, *sql.DB) {
+const badPostsTable = `
+    CREATE TABLE IF NOT EXISTS posts(
+        row INTEGER PRIMARY KEY AUTOINCREMENT
+    );
+    `
+const badImagesTable = `
+	CREATE TABLE IF NOT EXISTS images(
+		row INTEGER PRIMARY KEY AUTOINCREMENT
+	);
+	`
+const badMenuItemsTable = `
+	CREATE TABLE IF NOT EXISTS menu(
+		row INTEGER PRIMARY KEY AUTOINCREMENT
+	);
+	`
+const badNavbarItemsTable = `
+	CREATE TABLE IF NOT EXISTS navbar(
+		row INTEGER PRIMARY KEY AUTOINCREMENT
+	);`
+const badAssetTable = `
+	CREATE TABLE IF NOT EXISTS assets(
+		row INTEGER PRIMARY KEY AUTOINCREMENT
+	);
+	`
+const badAdminTable = `
+	CREATE TABLE IF NOT EXISTS admin(
+		row INTEGER PRIMARY KEY AUTOINCREMENT
+	);
+	`
+
+var unpopulatedTables = []string{badPostsTable, badImagesTable, badMenuItemsTable, badMenuItemsTable, badAssetTable, badAdminTable}
+
+/*
+creates in memory db and SQLiteRepo struct
+
+	:param tmp: path to the temp directory for the filesystem IO struct to write images to
+	:param migrate: choose to 'migrate' the database and create all the tables
+*/
+func newTestDb(tmp string, migrate bool) (*SQLiteRepo, *sql.DB) {
 
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		log.Fatal(err)
 	}
-	testDb := &SQLiteRepo{db: db}
-	err = testDb.Migrate()
+	testDb := &SQLiteRepo{db: db, imageIO: FilesystemImageIO{RootDir: tmp}}
+	if migrate {
+		err = testDb.Migrate(RequiredTables)
+	} else {
+		err = testDb.Migrate(unpopulatedTables)
+	}
 	if err != nil {
 		log.Fatal("failed to start the test database: ", err)
 	}
@@ -40,7 +81,7 @@ func TestMigrate(t *testing.T) {
 		log.Fatal(err)
 	}
 	testDb := &SQLiteRepo{db: db}
-	err = testDb.Migrate()
+	err = testDb.Migrate(RequiredTables)
 	if err != nil {
 		t.Error(err)
 	}
@@ -61,7 +102,7 @@ func TestGetDropdownElements(t *testing.T) {
 	type testcase struct {
 		seed []LinkPair
 	}
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			seed: []LinkPair{
@@ -89,7 +130,7 @@ func TestGetNavBarLinks(t *testing.T) {
 	type testcase struct {
 		seed []NavBarItem
 	}
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			seed: []NavBarItem{
@@ -117,7 +158,7 @@ func TestGetAssets(t *testing.T) {
 	type testcase struct {
 		seed []Asset
 	}
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			seed: []Asset{
@@ -146,7 +187,7 @@ func TestGetAdminTables(t *testing.T) {
 	type testcase struct {
 		seed AdminPage
 	}
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			seed: AdminPage{
@@ -181,7 +222,7 @@ func TestGetDocument(t *testing.T) {
 	type testcase struct {
 		seed Document
 	}
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			seed: Document{
@@ -209,7 +250,7 @@ func TestGetByCategory(t *testing.T) {
 	type testcase struct {
 		seed []Document
 	}
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			seed: []Document{
@@ -248,71 +289,79 @@ func TestGetByCategory(t *testing.T) {
 }
 func TestGetImage(t *testing.T) {
 
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	type testcase struct {
-		seed Image
+		seed       Image
+		shouldSeed bool
+		err        error
 	}
-	tmp := t.TempDir()
-	testImageLoc := path.Join(tmp, "test.jpg")
 	for _, tc := range []testcase{
 		{
 			seed: Image{
-				Ident:    Identifier("abc123"),
-				Title:    "xyz098",
-				Location: testImageLoc,
-				Desc:     "description",
-				Created:  "2024-12-31",
-				Data:     []byte("abc123xyz098"),
+				Ident:   Identifier("abc123"),
+				Title:   "xyz098",
+				Desc:    "description",
+				Created: "2024-12-31",
+				Data:    []byte("abc123xyz098"),
 			},
+			shouldSeed: true,
+			err:        nil,
+		},
+		{
+			seed: Image{
+				Ident: Identifier("zxcvbnm"),
+			},
+			shouldSeed: false,
+			err:        ErrNotExists,
 		},
 	} {
-		_, err := db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", string(tc.seed.Ident), tc.seed.Title, tc.seed.Location, tc.seed.Desc, "2024-12-31")
-		if err != nil {
-			t.Error(err)
+		if tc.shouldSeed {
+			_, err := db.Exec("INSERT INTO images (id, title, desc, created) VALUES (?,?,?,?)", string(tc.seed.Ident), tc.seed.Title, tc.seed.Desc, "2024-12-31")
+			if err != nil {
+				t.Error(err)
+			}
+			testDb.imageIO.Put(tc.seed.Data, tc.seed.Ident)
 		}
-		os.WriteFile(tc.seed.Location, tc.seed.Data, os.ModePerm)
 		got, err := testDb.GetImage(tc.seed.Ident)
 		if err != nil {
-			t.Error(err)
+			assert.Equal(t, tc.err, err)
+		} else {
+			assert.Equal(t, tc.seed, got)
 		}
-		assert.Equal(t, tc.seed, got)
 	}
 }
 func TestGetAllImages(t *testing.T) {
 
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 	type testcase struct {
 		seed []Image
 	}
-	tmp := t.TempDir()
 	for _, tc := range []testcase{
 		{
 			seed: []Image{
 				{
-					Ident:    Identifier("abc123"),
-					Title:    "xyz098",
-					Location: path.Join(tmp, "1.jpg"),
-					Data:     []byte("abc123xyz098"),
-					Created:  "2024-12-31",
-					Desc:     "description",
+					Ident:   Identifier("abc123"),
+					Title:   "xyz098",
+					Data:    []byte("abc123xyz098"),
+					Created: "2024-12-31",
+					Desc:    "description",
 				},
 				{
-					Ident:    Identifier("xyz098"),
-					Title:    "abc123",
-					Location: path.Join(tmp, "2.jpg"),
-					Data:     []byte("abc123xyz098"),
-					Created:  "2024-12-31",
-					Desc:     "description",
+					Ident:   Identifier("xyz098"),
+					Title:   "abc123",
+					Data:    []byte("abc123xyz098"),
+					Created: "2024-12-31",
+					Desc:    "description",
 				},
 			},
 		},
 	} {
 		for i := range tc.seed {
-			_, err := db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", string(tc.seed[i].Ident), tc.seed[i].Title, tc.seed[i].Location, tc.seed[i].Desc, tc.seed[i].Created)
+			_, err := db.Exec("INSERT INTO images (id, title, desc, created) VALUES (?,?,?,?)", string(tc.seed[i].Ident), tc.seed[i].Title, tc.seed[i].Desc, tc.seed[i].Created)
 			if err != nil {
 				t.Error(err)
 			}
-			os.WriteFile(tc.seed[i].Location, tc.seed[i].Data, os.ModePerm)
+			testDb.imageIO.Put(tc.seed[i].Data, tc.seed[i].Ident)
 		}
 		got := testDb.GetAllImages()
 		assert.Equal(t, tc.seed, got)
@@ -321,7 +370,7 @@ func TestGetAllImages(t *testing.T) {
 }
 
 func TestAllDocuments(t *testing.T) {
-	testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
 
 	type testcase struct {
 		seed []Document
@@ -364,45 +413,378 @@ func TestAllDocuments(t *testing.T) {
 }
 
 func TestUpdateDocument(t *testing.T) {
+	type testcase struct {
+		migrate bool
+		seed    Document
+		input   Document
+		err     error
+	}
 
-	// testDb, db := newTestDb()
+	for _, tc := range []testcase{
+		{
+			migrate: true,
+			seed: Document{
+				Row:      1,
+				Ident:    Identifier("qwerty"),
+				Title:    "abc 123",
+				Created:  "2024-12-31",
+				Body:     "blog post body etc",
+				Category: BLOG,
+				Sample:   "this is a sample",
+			},
+			input: Document{
+				Row:      1,
+				Ident:    Identifier("qwerty"),
+				Title:    "new title",
+				Created:  "2024-12-31",
+				Body:     "new updated post that must be reflected after the update",
+				Category: BLOG,
+				Sample:   "new updated post that must be reflected after the update",
+			},
+			err: nil,
+		},
+		{
+			migrate: true,
+			seed: Document{
+				Row:      1,
+				Ident:    Identifier("asdf"),
+				Title:    "abc 123",
+				Created:  "2024-12-31",
+				Body:     "blog post body etc",
+				Category: BLOG,
+				Sample:   "this is a sample",
+			},
+			input: Document{
+				Row:      1,
+				Ident:    Identifier("This id does not exist"),
+				Title:    "new title",
+				Created:  "2024-12-31",
+				Body:     "new updated post that must be reflected after the update",
+				Category: BLOG,
+				Sample:   "new updated post that must be reflected after the update",
+			},
+			err: ErrNotExists,
+		},
+		{
+			migrate: false, // not creating the database tables so we can error out the SQL statement execution
+			seed: Document{
+				Row:      1,
+				Ident:    Identifier("asdf"),
+				Title:    "abc 123",
+				Created:  "2024-12-31",
+				Body:     "blog post body etc",
+				Category: BLOG,
+				Sample:   "this is a sample",
+			},
+			input: Document{
+				Row:      1,
+				Ident:    Identifier("This id does not exist"),
+				Title:    "new title",
+				Created:  "2024-12-31",
+				Body:     "new updated post that must be reflected after the update",
+				Category: BLOG,
+				Sample:   "new updated post that must be reflected after the update",
+			},
+			err: errors.New("no such column: title"),
+		},
+	} {
+		testDb, db := newTestDb(t.TempDir(), tc.migrate)
+		if tc.migrate {
+			stmt, _ := db.Prepare("INSERT INTO posts(id, title, created, body, category, sample) VALUES (?,?,?,?,?,?)")
+			_, err := stmt.Exec(tc.seed.Ident, tc.seed.Title, tc.seed.Created, tc.seed.Body, tc.seed.Category, tc.seed.Sample)
+			if err != nil {
+				t.Error(err)
+			}
+		}
+		err := testDb.UpdateDocument(tc.input)
+		if err != nil {
+			assert.Equal(t, tc.err.Error(), err.Error())
+		} else {
+
+			row := db.QueryRow("SELECT * FROM posts WHERE id = ?", tc.seed.Ident)
+			var got Document
+			if err := row.Scan(&got.Row, &got.Ident, &got.Title, &got.Created, &got.Body, &got.Category, &got.Sample); err != nil {
+				assert.Equal(t, tc.err, err)
+			}
+			assert.Equal(t, tc.input, got)
+		}
+
+	}
 }
 
 func TestAddImage(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	type testcase struct {
+		data  []byte
+		title string
+		desc  string
+		err   error
+	}
+	testDb, _ := newTestDb(t.TempDir(), true)
+	for _, tc := range []testcase{
+		{
+			data:  []byte("abc123xyz098"),
+			title: "dont matter",
+			desc:  "also dont matter",
+		},
+	} {
+		id, err := testDb.AddImage(tc.data, tc.title, tc.desc)
+		if err != nil {
+			assert.Equal(t, tc.err, err)
+		} else {
+			b, err := testDb.imageIO.Get(id)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, tc.data, b)
+		}
+
+	}
+
 }
 func TestAddMenuItem(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	type testcase struct {
+		input []LinkPair
+		err   error
+	}
+	testDb, db := newTestDb(t.TempDir(), true)
+	for _, tc := range []testcase{
+		{
+			input: []LinkPair{
+				{
+					Text: "abc 123",
+					Link: "/abc/123",
+				},
+			},
+			err: nil,
+		},
+	} {
+		for i := range tc.input {
+			err := testDb.AddMenuItem(tc.input[i])
+			if err != nil {
+				assert.Equal(t, tc.err, err)
+			}
+			rows, err := db.Query("SELECT * FROM menu")
+			var got []LinkPair
+			defer rows.Close()
+			for rows.Next() {
+				var id int
+				var item LinkPair
+				err = rows.Scan(&id, &item.Link, &item.Text)
+				if err != nil {
+					log.Fatal(err)
+				}
+				got = append(got, item)
+			}
+			assert.Equal(t, tc.input, got)
+		}
+	}
 }
 func TestAddNavbarItem(t *testing.T) {
+	type testcase struct {
+		input []NavBarItem
+		err   error
+	}
+	testDb, db := newTestDb(t.TempDir(), true)
+	for _, tc := range []testcase{
+		{
+			input: []NavBarItem{
+				{
+					Redirect: "",
+					Link:     "",
+					Png:      []byte(""),
+				},
+			},
+		},
+	} {
+		for i := range tc.input {
+			err := testDb.AddNavbarItem(tc.input[i])
+			if err != nil {
+				assert.Equal(t, tc.err, err)
+			}
 
-	// testDb, db := newTestDb()
+		}
+		rows, err := db.Query("SELECT * FROM navbar")
+		var got []NavBarItem
+		defer rows.Close()
+		for rows.Next() {
+			var item NavBarItem
+			var id int
+			err = rows.Scan(&id, &item.Png, &item.Link, &item.Redirect)
+			if err != nil {
+				log.Fatal(err)
+			}
+			got = append(got, item)
+		}
+		assert.Equal(t, tc.input, got)
+
+	}
 }
 func TestAddAsset(t *testing.T) {
+	type testcase struct {
+		input []Asset
+		err   error
+	}
+	testDb, db := newTestDb(t.TempDir(), true)
+	for _, tc := range []testcase{
+		{
+			input: []Asset{
+				{
+					Data: []byte(""),
+					Name: "",
+				},
+			},
+		},
+	} {
+		for i := range tc.input {
+			err := testDb.AddAsset(tc.input[i].Name, tc.input[i].Data)
+			if err != nil {
+				assert.Equal(t, tc.err, err)
+			}
 
-	// testDb, db := newTestDb()
+		}
+		rows, err := db.Query("SELECT * FROM assets")
+		var assets []Asset
+		defer rows.Close()
+		for rows.Next() {
+			var item Asset
+			var id int
+			err = rows.Scan(&id, &item.Name, &item.Data)
+			if err != nil {
+				log.Fatal(err)
+			}
+			assets = append(assets, item)
+		}
+	}
 }
 func TestAddDocument(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	testDb, db := newTestDb(t.TempDir(), true)
+	type testcase struct {
+		seed Document
+		err  error
+	}
+	for _, tc := range []testcase{
+		{
+			seed: Document{
+				Title:    "abc 123",
+				Body:     "blog post body etc",
+				Created:  "2024-12-31",
+				Category: BLOG,
+				Sample:   "this is a sample",
+			},
+			err: nil,
+		},
+	} {
+		id, err := testDb.AddDocument(tc.seed)
+		if err != nil {
+			assert.Equal(t, tc.err, err)
+		}
+		row := db.QueryRow("SELECT * FROM posts WHERE id = ?", id)
+		var got Document
+		var rowNum int
+		if err := row.Scan(&rowNum, &got.Ident, &got.Title, &got.Created, &got.Body, &got.Category, &got.Sample); err != nil {
+			assert.Equal(t, tc.err, err)
+		}
+		want := Document{
+			Ident:    id,
+			Title:    tc.seed.Title,
+			Body:     tc.seed.Body,
+			Category: tc.seed.Category,
+			Created:  tc.seed.Created,
+			Sample:   tc.seed.MakeSample(),
+		}
+
+		assert.Equal(t, want, got)
+	}
 }
 func TestAddAdminTableEntry(t *testing.T) {
+	type testcase struct {
+		input AdminPage
+		err   error
+	}
+	testDb, db := newTestDb(t.TempDir(), true)
+	for _, tc := range []testcase{
+		{
+			input: AdminPage{
+				Tables: map[string][]TableData{
+					"test category": {
+						{
+							DisplayName: "abc 123",
+							Link:        "/abc/123",
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+	} {
+		for ctg, tables := range tc.input.Tables {
+			for i := range tables {
+				err := testDb.AddAdminTableEntry(tables[i], ctg)
+				if err != nil {
+					assert.Equal(t, tc.err, err)
+				}
+			}
+		}
+		rows, err := db.Query("SELECT * FROM admin")
+		got := AdminPage{Tables: map[string][]TableData{}}
+		defer rows.Close()
+		for rows.Next() {
+			var item TableData
+			var id int
+			var category string
+			err = rows.Scan(&id, &item.DisplayName, &item.Link, &category)
+			if err != nil {
+				log.Fatal(err)
+			}
+			got.Tables[category] = append(got.Tables[category], item)
 
-	// testDb, db := newTestDb()
+		}
+		assert.Equal(t, tc.input, got)
+	}
 }
 
 func TestDeleteDocument(t *testing.T) {
+	type testcase struct {
+		input Document
+		err   error
+	}
+	testDb, db := newTestDb(t.TempDir(), true)
+	for _, tc := range []testcase{
+		{
+			input: Document{
+				Title:    "abc 123",
+				Body:     "blog post body etc",
+				Created:  "2024-12-31",
+				Category: BLOG,
+				Sample:   "this is a sample",
+			},
+			err: nil,
+		},
+	} {
+		id, err := testDb.AddDocument(tc.input)
+		if err != nil {
+			t.Error("failed to add doc: ", err)
+		}
+		err = testDb.DeleteDocument(id)
+		if err != nil {
+			assert.Equal(t, tc.err, err)
+		}
+		row, _ := db.Query("SELECT * FROM posts")
+		if row.Next() {
+			t.Error("Too many rows returned after deleting")
+		}
 
-	// testDb, db := newTestDb()
+	}
 }
 
 func TestGetImageStore(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	// testDb, db := newTestDb(t.TempDir(), true)
 }
 func TestNewIdentifier(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	// testDb, db := newTestDb(t.TempDir(), true)
 }

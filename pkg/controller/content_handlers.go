@@ -116,7 +116,7 @@ func (c *Controller) MakeBlogPost(ctx *gin.Context) {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
 	}
-	err = c.database.AddDocument(doc)
+	_, err = c.database.AddDocument(doc)
 	if err != nil {
 		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "Update Failed!", "Color": "red"})
 		return
@@ -169,7 +169,7 @@ func (c *Controller) SaveFile(ctx *gin.Context) {
 		}
 		output.Write(fb[:n])
 	}
-	err = c.database.AddImage(fb, img.Title, img.Desc)
+	_, err = c.database.AddImage(fb, img.Title, img.Desc)
 	if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return

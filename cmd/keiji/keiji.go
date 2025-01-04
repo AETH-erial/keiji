@@ -93,8 +93,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	webserverDb := storage.NewSQLiteRepo(db)
-	err = webserverDb.Migrate()
+	webserverDb := storage.NewSQLiteRepo(db, storage.FilesystemImageIO{RootDir: os.Getenv(env.IMAGE_STORE)})
+	err = webserverDb.Migrate(storage.RequiredTables)
 	if err != nil {
 		log.Fatal(err)
 	}

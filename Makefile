@@ -1,4 +1,4 @@
-.PHONY: build format docs
+.PHONY: build format test coverage dev-run install
 
 
 WEBSERVER = keiji
