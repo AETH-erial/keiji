@@ -17,7 +17,7 @@ const WEB_ROOT = "WEB_ROOT"
 const DOMAIN_NAME = "DOMAIN_NAME"
 const HOST_PORT = "HOST_PORT"
 const HOST_ADDR = "HOST_ADDR"
-const SSL_MODE = "SSL_MODE"
+const USE_SSL = "USE_SSL"
 const CHAIN = "CHAIN"
 const KEY = "KEY"
 
@@ -32,7 +32,7 @@ var REQUIRED_VARS = map[string]string{
 	HOST_PORT:      "#the port to run the server on (int)",
 	HOST_ADDR:      "#the address for the server to listen on (string)",
 	DOMAIN_NAME:    "#the servers domain name, i.e. 'aetherial.dev', or 'localhost' (string)",
-	SSL_MODE:       "#chose to use SSL or not (boolean)",
+	USE_SSL:        "#chose to use SSL or not (boolean)",
 	KEIJI_USERNAME: "#the administrator username to login with",
 	KEIJI_PASSWORD: "#the password for the administrator accounit",
 }
@@ -100,9 +100,9 @@ func LoadAndVerifyEnv(path string, vars map[string]string) error {
 		return err
 	}
 
-	for i := range vars {
-		if os.Getenv(vars[i]) == "" {
-			return &EnvNotSet{NotSet: vars[i]}
+	for k := range vars {
+		if os.Getenv(k) == "" {
+			return &EnvNotSet{NotSet: k}
 		}
 	}
 	return nil

@@ -77,8 +77,8 @@
 
     <div id="mySidenav" class="sidenav row">
         {{ range .menu}}
-            <button class="btn-primary" hx-get="{{ .MenuLink }}" style="font-family: monospace;" hx-target="#main">
-                {{ .LinkText }}
+            <button class="btn-primary" hx-get="{{ .Link }}" style="font-family: monospace;" hx-target="#main">
+                {{ .Text }}
             </button>
         {{ end }}
     </div>
