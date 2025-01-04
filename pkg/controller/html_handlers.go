@@ -4,43 +4,62 @@ import (
 	"html/template"
 	"net/http"
 
-	"git.aetherial.dev/aeth/keiji/pkg/helpers"
+	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 )
+
+/*
+convert markdown to html
+
+	:param md: the byte array containing the Markdown to convert
+*/
+func MdToHTML(md []byte) []byte {
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+	p := parser.NewWithExtensions(extensions)
+	doc := p.Parse(md)
+
+	htmlFlags := html.CommonFlags | html.HrefTargetBlank
+	opts := html.RendererOptions{Flags: htmlFlags}
+	renderer := html.NewRenderer(opts)
+
+	return markdown.Render(doc, renderer)
+}
 
 // @Name ServePost
 // @Summary serves HTML files out of the HTML directory
 // @Tags webpages
-// @Router /writing/:post-name [get]
+// @Router /writing/:id [get]
 func (c *Controller) ServePost(ctx *gin.Context) {
-	rds := helpers.NewRedisClient(c.RedisConfig)
-	post, exist := ctx.Params.Get("post-name")
+	post, exist := ctx.Params.Get("id")
 	if !exist {
 		ctx.JSON(404, map[string]string{
 			"Error": "the requested file could not be found",
 		})
 		return
 	}
-	doc, err := rds.GetItem(post)
+	doc, err := c.database.GetDocument(storage.Identifier(post))
 	if err != nil {
 		ctx.JSON(500, map[string]string{
 			"Error": err.Error(),
 		})
 		return
 	}
-	if doc.Category == helpers.CONFIGURATION {
+	if doc.Category == storage.CONFIGURATION {
 		ctx.Status(404)
 		return
 	}
 	ctx.HTML(http.StatusOK, "blogpost", gin.H{
 		"navigation": gin.H{
-			"headers": c.Headers().Elements,
+			"headers": c.database.GetNavBarLinks(),
 		},
-		"title":   doc.Ident,
+		"Title":   doc.Title,
 		"Ident":   doc.Ident,
 		"Created": doc.Created,
-		"Body":    template.HTML(helpers.MdToHTML([]byte(doc.Body))),
-		"menu":    c.Menu(),
+		"Body":    template.HTML(MdToHTML([]byte(doc.Body))),
+		"menu":    c.database.GetDropdownElements(),
 	})
 
 }
@@ -48,87 +67,40 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 // @Name ServeBlogHome
 // @Summary serves the HTML file for the blog post homepage
 // @Tags webpages
-// @Router /blog [get]
-func (c *Controller) ServeBlogHome(ctx *gin.Context) {
-	docs, err := helpers.GetAllDocuments(helpers.BLOG, c.RedisConfig)
-	if err != nil {
-		ctx.JSON(500, map[string]string{
-			"Error getting docs": err.Error(),
-		})
-		return
-	}
-	ctx.HTML(http.StatusOK, "home", gin.H{
-		"navigation": gin.H{
-			"headers": c.Headers().Elements,
-		},
-		"listings": docs,
-		"menu":    c.Menu(),
-	})
-}
-
-// @Name ServeHtml
-// @Summary serves HTML files out of the HTML directory
-// @Tags webpages
-// @Router /home [get]
+// @Router / [get]
 func (c *Controller) ServeHome(ctx *gin.Context) {
-	docs, err := helpers.GetAllDocuments(helpers.BLOG, c.RedisConfig)
-	if err != nil {
-		ctx.JSON(500, map[string]string{
-			"Error getting docs": err.Error(),
-		})
-		return
+	home := c.database.GetByCategory(storage.HOMEPAGE)
+	var content storage.Document
+	if len(home) == 0 {
+		content = storage.Document{
+			Body: "Under construction. Sry :(",
+		}
+	} else {
+		content = home[0]
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"headers": c.Headers().Elements,
+			"headers": c.database.GetNavBarLinks(),
 		},
-		"menu":    c.Menu(),
-		"listings": docs,
+		"menu":    c.database.GetDropdownElements(),
+		"default": content,
 	})
 }
 
-// @Name ServeCreativeWriting
-// @Summary serves the HTML file for the creative writing homepage
+// @Name ServeBlog
+// @Summary serves the HTML for written post listings
+// @Tags webpages
+// @Router /blog [get]
+func (c *Controller) ServeBlog(ctx *gin.Context) {
+	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(storage.BLOG))
+}
+
+// @Name ServeCreative
+// @Summary serves the HTML for the creative writing listings
 // @Tags webpages
 // @Router /creative [get]
-func (c *Controller) ServeCreativeWriting(ctx *gin.Context) {
-	docs, err := helpers.GetAllDocuments(helpers.CREATIVE, c.RedisConfig)
-	if err != nil {
-		ctx.JSON(500, map[string]string{
-			"Error getting docs": err.Error(),
-		})
-		return
-	}
-	ctx.HTML(http.StatusOK, "home", gin.H{
-		"navigation": gin.H{
-			"headers": c.Headers().Elements,
-		},
-		"listings": docs,
-		"menu":    c.Menu(),
-	})
-
-}
-
-// @Name ServeTechnicalWriteups
-// @Summary serves the HTML file for the technical writeup homepage
-// @Tags webpages
-// @Router /writeups [get]
-func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
-	docs, err := helpers.GetAllDocuments(helpers.TECHNICAL, c.RedisConfig)
-	if err != nil {
-		ctx.JSON(500, map[string]string{
-			"Error getting docs": err.Error(),
-		})
-		return
-	}
-	ctx.HTML(http.StatusOK, "home", gin.H{
-		"navigation": gin.H{
-			"headers": c.Headers().Elements,
-		},
-		"listings": docs,
-		"menu":    c.Menu(),
-	})
-
+func (c *Controller) ServeCreative(ctx *gin.Context) {
+	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(storage.CREATIVE))
 }
 
 // @Name ServeDigitalArt
@@ -136,22 +108,12 @@ func (c *Controller) ServeTechnicalWriteups(ctx *gin.Context) {
 // @Tags webpages
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
-	rds := helpers.NewRedisClient(c.RedisConfig)
-	fnames, err := helpers.GetImageData(rds)
-	if err != nil {
-		ctx.HTML(http.StatusInternalServerError, "unhandled_error",
-			gin.H{
-				"StatusCode": http.StatusInternalServerError,
-				"Reason":     err.Error(),
-			},
-		)
-		return
-	}
+	images := c.database.GetAllImages()
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
-			"headers": c.Headers().Elements,
+			"headers": c.database.GetNavBarLinks(),
 		},
-		"images": fnames,
-		"menu":    c.Menu(),
+		"images": images,
+		"menu":   c.database.GetDropdownElements(),
 	})
 }

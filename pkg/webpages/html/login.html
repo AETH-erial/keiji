@@ -1,0 +1,26 @@
+{{ define "login" }}
+<!DOCTYPE html>
+<html lang="en">
+        <div class="container-fluid p-5 position-relative">
+            <div class="container">
+                <div class="row">
+                    <div class="col-sm"></div>
+                    <div class="row position-relative shadow-lg p-3 m-3 rounded justify-content-center"
+                        style="width: 80vh; max-width: 95%; background-color: rgb(22, 22, 22);">
+                        <div class="col-sm" style="color: whitesmoke; font-size: xx-large; font-family: monospace;">
+                            <form method="post"
+                                hx-post="/login"
+                                hx-ext="json-enc"
+                                hx-target="#main">
+                                <input type="text" name="username" placeholder="do androids dream" required><br>
+                                <input type="password" name="password" placeholder="of electric sheep?" required><br>
+                                <button class="btn-primary" type="submit" hx-target="#main">Send</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-sm"></div>
+                </div>
+            </div>
+        </div>
+</html>
+{{ end }}
