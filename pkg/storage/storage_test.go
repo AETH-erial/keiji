@@ -3,6 +3,8 @@ package storage
 import (
 	"database/sql"
 	"log"
+	"os"
+	"path"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -246,15 +248,114 @@ func TestGetByCategory(t *testing.T) {
 }
 func TestGetImage(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	testDb, db := newTestDb()
+	type testcase struct {
+		seed Image
+	}
+	tmp := t.TempDir()
+	testImageLoc := path.Join(tmp, "test.jpg")
+	os.WriteFile(testImageLoc, []byte("abc123xyz098"), os.ModePerm)
+	for _, tc := range []testcase{
+		{
+			seed: Image{
+				Ident:    Identifier("abc123"),
+				Title:    "xyz098",
+				Location: testImageLoc,
+				Desc:     "description",
+				Created:  "2024-12-31",
+			},
+		},
+	} {
+		_, err := db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", string(tc.seed.Ident), tc.seed.Title, tc.seed.Location, tc.seed.Desc, "2024-12-31")
+		if err != nil {
+			t.Error(err)
+		}
+		got, err := testDb.GetImage(tc.seed.Ident)
+		if err != nil {
+			t.Error(err)
+		}
+		assert.Equal(t, tc.seed, got)
+	}
 }
 func TestGetAllImages(t *testing.T) {
 
-	// testDb, db := newTestDb()
+	testDb, db := newTestDb()
+	type testcase struct {
+		seed []Image
+	}
+	tmp := t.TempDir()
+	for _, tc := range []testcase{
+		{
+			seed: []Image{
+				{
+					Ident:    Identifier("abc123"),
+					Title:    "xyz098",
+					Location: path.Join(tmp, "1.jpg"),
+					Desc:     "description",
+				},
+				{
+					Ident:    Identifier("xyz098"),
+					Title:    "abc123",
+					Location: path.Join(tmp, "2.jpg"),
+					Desc:     "description",
+				},
+			},
+		},
+	} {
+		for i := range tc.seed {
+			_, err := db.Exec("INSERT INTO images (id, title, location, desc, created) VALUES (?,?,?,?,?)", tc.seed[i].Ident, tc.seed[1].Title, tc.seed[2].Location, tc.seed[3].Desc, "2024-12-31")
+			if err != nil {
+				t.Error(err)
+			}
+			os.WriteFile(tc.seed[i].Location, tc.seed[i].Data, os.ModePerm)
+		}
+		got := testDb.GetAllImages()
+		assert.Equal(t, tc.seed, got)
+	}
+
 }
 
 func TestAllDocuments(t *testing.T) {
-	// testDb, db := newTestDb()
+	testDb, db := newTestDb()
+
+	type testcase struct {
+		seed []Document
+	}
+	for _, tc := range []testcase{
+		{
+			seed: []Document{
+				{
+					Row:      1,
+					Ident:    Identifier("qwerty"),
+					Title:    "abc 123",
+					Created:  "2024-12-31",
+					Body:     "blog post body etc",
+					Category: BLOG,
+					Sample:   "this is a sample",
+				},
+				{
+					Row:      2,
+					Ident:    Identifier("poiuyt"),
+					Title:    "abc 123",
+					Created:  "2024-12-31",
+					Body:     "blog post body etc",
+					Category: BLOG,
+					Sample:   "this is a sample",
+				},
+			},
+		},
+	} {
+		stmt, _ := db.Prepare("INSERT INTO posts(id, title, created, body, category, sample) VALUES (?,?,?,?,?,?)")
+		for i := range tc.seed {
+			_, err := stmt.Exec(tc.seed[i].Ident, tc.seed[i].Title, tc.seed[i].Created, tc.seed[i].Body, tc.seed[i].Category, tc.seed[i].Sample)
+			if err != nil {
+				t.Error(err)
+			}
+		}
+		got := testDb.AllDocuments()
+		assert.Equal(t, tc.seed, got)
+	}
+
 }
 
 func TestUpdateDocument(t *testing.T) {
