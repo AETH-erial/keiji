@@ -1,28 +1,29 @@
-.PHONY: build format docs
+.PHONY: build format test coverage dev-run install
 
 
-WEBSERVER = webserver
-SEED_CMD = seed
+WEBSERVER = keiji
+SEED_CMD = keiji-ctl
 SWAG := $(shell command -v swag 2> /dev/null)
 ## Have to set the WEB_ROOT and DOMAIN_NAME environment variables when building
 build:
-	go build -ldflags "-X main.WEB_ROOT=$(WEB_ROOT) \
-	-X main.DOMAIN_NAME=$(DOMAIN_NAME)" \
-	-o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go
+	go build -o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go && \
+	go build -o ./build/linux/$(SEED_CMD)/$(SEED_CMD) ./cmd/$(SEED_CMD)/$(SEED_CMD).go
+
+install:
+	sudo cp ./build/linux/$(SEED_CMD)/$(SEED_CMD) /usr/local/bin/
 
 format:
 	go fmt ./...
 
-docs:
-ifndef SWAG
-	$(error "Could not find the swag binary.")
-endif
-	swag init -g ./cmd/$(WEBSERVER)/$(WEBSERVER).go
+test:
+	go test ./...
 
-build-seed-cmd:
-	go build -o ./build/linux/$(SEED_CMD)/$(SEED_CMD) ./cmd/$(SEED_CMD)/$(SEED_CMD).go
+
+coverage:
+	go test -v ./... -covermode=count -coverpkg=./... -coverprofile coverage/coverage.out
+	go tool cover -html coverage/coverage.out -o coverage/coverage.html
+
 
 dev-run:
-	go build -ldflags "-X main.WEB_ROOT=$(WEB_ROOT)" \
-	-o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go && \
+	go build -o ./build/linux/$(WEBSERVER)/$(WEBSERVER) ./cmd/$(WEBSERVER)/$(WEBSERVER).go && \
 	./build/linux/$(WEBSERVER)/$(WEBSERVER) .env

@@ -1,0 +1,91 @@
+{{ define "head" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/api/v1/cdn/bootstrap.min.css">
+        <link rel="stylesheet" href="/api/v1/cdn/mdb.min.css">
+        <link rel="stylesheet" href="/api/v1/cdn/custom.css">
+    </head>
+</html>
+{{ end }}
+
+{{ define "navigation" }}
+<div class="container-fluid sticky-top pb-0">
+    <div class="row align-items-center justify-content-center h-100 shadow-lg p-0 mb-0 rounded" style="background-color: #2a2e2f;">
+        <div class="col-sm-8 p-3">
+            <div style="color: whitesmoke; font-size: xx-large; font-family: monospace;">
+                <a href="/" style="color:whitesmoke">aetherial.dev homepage</a>
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="row">
+                {{ range .headers }}
+                    <div class="col-2">
+                        <div class="bg-image hover-overlay shadow-1-strong rounded d-inline-flex p-0"
+                            data-mdb-ripple-init
+                            data-mdb-ripple-color="light">
+                            <img src="/api/v1/assets/{{ .Link}}" style="max-height: 5vh;"/>
+                            <a href="{{ .Redirect}}" target="_blank">
+                              <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)"></div>
+                            </a>
+                        </div>
+                    </div>
+                {{ end }}
+                <div class="col-2">
+                    <div class="bg-image hover-overlay shadow-1-strong d-inline-flex p-0 row"
+                            id="dropdownMenuButton" data-bs-toggle="dropdown"
+                            data-mdb-ripple-init
+                            data-mdb-ripple-color="light">
+                            <span onclick="toggleNav()">
+                            <img src="/api/v1/assets/menu.png" style="max-height: 5vh;"/>
+                                <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)"></div>
+                            </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "default"}}
+
+        <div class="container-fluid row">
+            <div class="col"></div>
+            <div class="col-auto p-3 m-3" style="max-width: 80vw;">
+                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-family: monospace; white-space: pre-wrap">
+                    <p class="text-left">{{ .Body }}</p>
+                </div>
+            </div>
+            <div class="col"></div>
+         </div>
+{{ end }}
+
+
+
+{{ define "home" }}
+<!DOCTYPE html>
+<html lang="en">
+    {{ template "head" }}
+    <body style="background-color: #191a1b;">
+    {{ template "navigation" .navigation }}
+    <div id="main">
+        {{ template "default" .default }}
+    </div>
+
+    <div id="mySidenav" class="sidenav row">
+        {{ range .menu}}
+            <button class="btn-primary" hx-get="{{ .Link }}" style="font-family: monospace;" hx-target="#main">
+                {{ .Text }}
+            </button>
+        {{ end }}
+    </div>
+        <script type="text/javascript" src="/api/v1/cdn/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+        <script src="/api/v1/cdn/slide.js"></script>
+        <script src="/api/v1/cdn/htmx.min.js"></script>
+        <script src="/api/v1/cdn/json-enc.js"></script>
+    </body>
+</html>
+{{ end }}

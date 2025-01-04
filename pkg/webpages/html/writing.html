@@ -1,0 +1,22 @@
+{{ define "writing" }}
+<div class="container-fluid row">
+    {{ range . }}
+        <div class="col hover-overlay" data-mdb-ripple-init data-mdb-ripple-color="light">
+            <div class="row position-relative shadow-lg p-3 m-3 rounded justify-content-center" style="width: 80vh; max-width: 95%; background-color: rgb(22, 22, 22);">
+                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content;font-family: monospace;">
+                    <p class="text-center">{{ .Title }}</p>
+                </div>
+                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-family: monospace;">
+                    <p class="text-left">{{ .Created }}</p>
+                </div>
+                <div class="row" style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-family: monospace;">
+                    <p class="text-left">{{ .Sample }}</p>
+                </div>
+                <button hx-get="/writing/{{ .Ident }}" hx-target="#main">
+                    <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)"></div>
+                </button>
+            </div>
+        </div>
+    {{ end }}
+</div>
+{{ end }}
