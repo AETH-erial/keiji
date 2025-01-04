@@ -97,11 +97,11 @@ func (d *Document) MakeSample() string {
 }
 
 type Image struct {
-	Ident    Identifier            `json:"identifier"`
-	Location string                `json:"title" form:"title"`
-	Title    string                `json:"description" form:"description"`
+	Ident    Identifier `json:"identifier"`
+	Location string
+	Title    string                `json:"title" form:"title"`
 	File     *multipart.FileHeader `form:"file"`
-	Desc     string
+	Desc     string                `json:"description" form:"description"`
 	Created  string
 	Category string
 	Data     []byte
