@@ -12,8 +12,9 @@ import (
 )
 
 /*
-	 convert markdown to html
-		:param md: the byte array containing the Markdown to convert
+convert markdown to html
+
+	:param md: the byte array containing the Markdown to convert
 */
 func MdToHTML(md []byte) []byte {
 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
