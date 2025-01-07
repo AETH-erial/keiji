@@ -1,4 +1,4 @@
-module git.aetherial.dev/aeth/keiji
+module github.com/AETH-erial/keiji
 
 go 1.21.6
 
