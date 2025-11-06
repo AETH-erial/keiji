@@ -242,6 +242,51 @@ func (s *SQLiteRepo) GetDropdownElementByName(text string) (LinkPair, bool) {
 
 }
 
+// get Admin table entry by its display name, link, and category.
+func (s *SQLiteRepo) GetAdminTableEntry(displayName, link, category string) (TableData, bool) {
+	rows := s.db.QueryRow("SELECT * FROM admin WHERE display_name = ? AND link = ? AND category = ?", displayName, link, category)
+	var item TableData
+	var id int
+	if err := rows.Scan(&id, &item.DisplayName, &item.Link, &category); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return item, false
+		}
+		log.Fatal(err)
+	}
+	return item, true
+
+}
+
+// get navbar entry.
+func (s *SQLiteRepo) GetNavbarLink(link, redirect string) (NavBarItem, bool) {
+	rows := s.db.QueryRow("SELECT * FROM navbar WHERE link = ? AND redirect = ?", link, redirect)
+	var item NavBarItem
+	var id int
+	if err := rows.Scan(&id, &item.Png, &item.Link, &item.Redirect); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return item, false
+		}
+		log.Fatal(err)
+	}
+	return item, true
+
+}
+
+// get an asset from the store
+func (s *SQLiteRepo) GetAsset(name string) (Asset, bool) {
+	rows := s.db.QueryRow("SELECT * FROM assets WHERE name = ?", name)
+	var item Asset
+	var id int
+	if err := rows.Scan(&id, &item.Name, &item.Data); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return item, false
+		}
+		log.Fatal(err)
+	}
+	return item, true
+
+}
+
 /*
 Get all nav bar items. Returns a list of NavBarItem structs with the png data, the file name, and the redirect location of the icon
 
@@ -470,7 +515,7 @@ func (s *SQLiteRepo) AddMenuItem(item LinkPair) error {
 	_, found := s.GetDropdownElementByName(item.Text)
 	if found {
 		tx.Rollback()
-		return errors.New("Row exists.")
+		return ErrDuplicate
 	}
 	stmt, _ := tx.Prepare("INSERT INTO menu(link, text) VALUES (?,?)")
 	_, err = stmt.Exec(item.Link, item.Text)
@@ -492,6 +537,11 @@ func (s *SQLiteRepo) AddNavbarItem(item NavBarItem) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
+	}
+	_, found := s.GetNavbarLink(item.Link, item.Redirect)
+	if found {
+		tx.Rollback()
+		return ErrDuplicate
 	}
 	stmt, err := tx.Prepare("INSERT INTO navbar(png, link, redirect) VALUES (?,?,?)")
 	if err != nil {
@@ -518,6 +568,11 @@ func (s *SQLiteRepo) AddAsset(name string, data []byte) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
+	}
+	_, found := s.GetAsset(name)
+	if found {
+		tx.Rollback()
+		return ErrDuplicate
 	}
 	stmt, _ := tx.Prepare("INSERT INTO assets(name, data) VALUES (?,?)")
 	_, err = stmt.Exec(name, data)
@@ -561,6 +616,11 @@ func (s *SQLiteRepo) AddAdminTableEntry(item TableData, category string) error {
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
+	}
+	_, found := s.GetAdminTableEntry(item.DisplayName, item.Link, category)
+	if found {
+		tx.Rollback()
+		return ErrDuplicate
 	}
 	stmt, _ := tx.Prepare("INSERT INTO admin (display_name, link, category) VALUES (?,?,?)")
 	_, err = stmt.Exec(item.DisplayName, item.Link, category)
