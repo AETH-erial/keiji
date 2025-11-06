@@ -40,7 +40,7 @@ const badAdminTable = `
 	);
 	`
 
-var unpopulatedTables = []string{badPostsTable, badImagesTable, badMenuItemsTable, badMenuItemsTable, badAssetTable, badAdminTable}
+var unpopulatedTables = []string{badPostsTable, badImagesTable, badNavbarItemsTable, badMenuItemsTable, badAssetTable, badAdminTable}
 
 /*
 creates in memory db and SQLiteRepo struct
@@ -548,7 +548,7 @@ func TestAddMenuItem(t *testing.T) {
 		input []LinkPair
 		err   error
 	}
-	testDb, db := newTestDb(t.TempDir(), true)
+	testDb, _ := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			input: []LinkPair{
@@ -563,19 +563,14 @@ func TestAddMenuItem(t *testing.T) {
 		for i := range tc.input {
 			err := testDb.AddMenuItem(tc.input[i])
 			if err != nil {
+				// assert.Equal(expected, actual)
 				assert.Equal(t, tc.err, err)
 			}
-			rows, err := db.Query("SELECT * FROM menu")
-			var got []LinkPair
-			defer rows.Close()
-			for rows.Next() {
-				var id int
-				var item LinkPair
-				err = rows.Scan(&id, &item.Link, &item.Text)
-				if err != nil {
-					log.Fatal(err)
-				}
-				got = append(got, item)
+			rows := testDb.db.QueryRow("SELECT * FROM menu WHERE link = ? AND text = ?", tc.input[i].Link, tc.input[i].Text)
+			var got LinkPair
+			var id int
+			if err := rows.Scan(&id, &got.Link, &got.Text); err != nil {
+				t.Errorf("failed: %s", err.Error())
 			}
 			assert.Equal(t, tc.input, got)
 		}

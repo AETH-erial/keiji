@@ -228,16 +228,16 @@ func (s *SQLiteRepo) GetDropdownElements() []LinkPair {
 /*
 Retrieve a dropdown element by its text name on the UI
 */
-func (s *SQLiteRepo) GetDropdownElementByName(text string) (LinkPair, bool) {
-	rows := s.db.QueryRow("SELECT * FROM menu WHERE text = ?", text)
+func (s *SQLiteRepo) GetMenuItemByName(link, text string) (LinkPair, bool) {
+	rows := s.db.QueryRow("SELECT * FROM menu WHERE link = ? AND text = ?", link, text)
 	var item LinkPair
 	var id int
 	if err := rows.Scan(&id, &item.Link, &item.Text); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return item, false
 		}
-		log.Fatal(err)
 	}
+	log.Printf("%+v\n", item)
 	return item, true
 
 }
@@ -512,7 +512,7 @@ func (s *SQLiteRepo) AddMenuItem(item LinkPair) error {
 	if err != nil {
 		return err
 	}
-	_, found := s.GetDropdownElementByName(item.Text)
+	_, found := s.GetMenuItemByName(item.Link, item.Text)
 	if found {
 		tx.Rollback()
 		return ErrDuplicate
