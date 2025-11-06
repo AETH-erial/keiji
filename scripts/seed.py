@@ -18,7 +18,8 @@ admin_table = {
             "digital media": "/admin/upload"
             },
         "modify": {
-            "blog post": "/admin/posts/all"
+            "blog post": "/admin/posts/all",
+            "navbar": "/admin/navbar/all"
             },
         }
 menu = {

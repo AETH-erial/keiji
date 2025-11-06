@@ -113,6 +113,7 @@ type DocumentIO interface {
 	GetAllImages() []Image
 	UpdateDocument(doc Document) error
 	DeleteDocument(id Identifier) error
+	DeleteNavbarItem(id Identifier) error
 	AddDocument(doc Document) (Identifier, error)
 	AddImage(data []byte, title, desc string) (Identifier, error)
 	AddAsset(name string, data []byte) error
@@ -557,6 +558,28 @@ func (s *SQLiteRepo) DeleteDocument(id Identifier) error {
 		return err
 	}
 	stmt, _ := tx.Prepare("DELETE FROM posts WHERE id=?")
+	_, err = stmt.Exec(id)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+
+}
+
+/*
+Delete navigation bar item
+
+	:param id: the name or 'id' of the navbar item to remove
+*/
+func (s *SQLiteRepo) DeleteNavbarItem(id Identifier) error {
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, _ := tx.Prepare("DELETE FROM navbar WHERE redirect=?")
 	_, err = stmt.Exec(id)
 	if err != nil {
 		tx.Rollback()

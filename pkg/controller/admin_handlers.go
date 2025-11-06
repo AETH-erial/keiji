@@ -157,6 +157,30 @@ func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 }
 
 /*
+@Name RemoveNavbarItem
+@Summary remove an entry from the navbar
+@Tags admin
+@Router /admin/navbar
+*/
+func (c *Controller) RemoveNavbarItem(ctx *gin.Context) {
+	itemName := ctx.Param("item_name")
+	err := c.database.DeleteNavbarItem(storage.Identifier(itemName))
+	if err != nil {
+		ctx.JSON(400, map[string]string{
+			"name":   itemName,
+			"status": "FAIL",
+			"Error":  err.Error(),
+		})
+		return
+	}
+	ctx.JSON(200, map[string]string{
+		"name":   itemName,
+		"status": "SUCCESS",
+	})
+
+}
+
+/*
 @Name AddAsset
 @Summary add an asset to the db
 @Tags admin
