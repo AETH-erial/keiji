@@ -164,7 +164,7 @@ func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 */
 func (c *Controller) RemoveNavbarItem(ctx *gin.Context) {
 	itemName := ctx.Param("item_name")
-	err := c.database.DeleteNavbarItem(storage.Identifier(itemName))
+	err := c.database.RemoveNavbarItem(storage.Identifier(itemName))
 	if err != nil {
 		ctx.JSON(400, map[string]string{
 			"name":   itemName,
@@ -176,6 +176,27 @@ func (c *Controller) RemoveNavbarItem(ctx *gin.Context) {
 	ctx.JSON(200, map[string]string{
 		"name":   itemName,
 		"status": "SUCCESS",
+	})
+
+}
+
+func (c *Controller) ServeNavbarModify(ctx *gin.Context) {
+	navbar := c.database.GetNavBarLinks()
+	tableData := storage.AdminPage{Tables: map[string][]storage.TableData{}}
+	for i := range navbar {
+		tableData.Tables[storage.Topics[i]] = append(tableData.Tables[storage.Topics[i]],
+			storage.TableData{
+				DisplayName: navbar[i].Link,
+				Link:        fmt.Sprintf("/admin/options/%s", navbar[i].Link),
+			},
+		)
+	}
+	ctx.HTML(200, "admin", gin.H{
+		"navigation": gin.H{
+			"menu":    c.database.GetDropdownElements(),
+			"headers": c.database.GetNavBarLinks(),
+		},
+		"Tables": tableData.Tables,
 	})
 
 }
