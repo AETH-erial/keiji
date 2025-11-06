@@ -68,6 +68,7 @@ func main() {
 		"login",
 		"admin",
 		"blogpost_editor",
+		"navbar_editor",
 		"post_options",
 		"unhandled_error",
 		"upload",

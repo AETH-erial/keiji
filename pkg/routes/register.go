@@ -43,6 +43,8 @@ func Register(e *gin.Engine, domain string, database storage.DocumentIO, files f
 	priv.PATCH("/posts", c.UpdateBlogPost)
 	priv.DELETE("/posts/:id", c.DeleteDocument)
 	priv.DELETE("/navbar/:item_name", c.RemoveNavbarItem)
+	priv.GET("/navbar/new", c.ServeNewNavbarItem)
+	priv.GET("/navbar/options/:id", c.NavbarOptions)
 	priv.GET("/navbar/all", c.ServeNavbarModify)
 
 }

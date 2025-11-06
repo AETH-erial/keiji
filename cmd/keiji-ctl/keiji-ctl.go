@@ -7,16 +7,49 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 
 	"git.aetherial.dev/aeth/keiji/pkg/auth"
 	"git.aetherial.dev/aeth/keiji/pkg/controller"
 	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+func newfileUploadRequest(uri string, params map[string]string, paramName, path string) (*http.Request, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile(paramName, filepath.Base(path))
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for key, val := range params {
+		_ = writer.WriteField(key, val)
+	}
+	err = writer.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", uri, body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	return req, err
+}
 
 // authenticate and get the cookie needed to make updates
 func authenticate(url, username, password string) *http.Cookie {
@@ -116,21 +149,16 @@ func main() {
 
 	case "nav":
 		fmt.Println(string(pngFile))
-		b, err := os.ReadFile(pngFile)
+		_, fileName := path.Split(pngFile)
+		extraParams := map[string]string{
+			"link":     fileName,
+			"redirect": redirect,
+		}
+		req, err := newfileUploadRequest(address+"/admin/navbar", extraParams, "file", pngFile)
 		if err != nil {
 			log.Fatal(err)
 		}
-		_, fileName := path.Split(pngFile)
-		fmt.Println(fileName)
-		item := storage.NavBarItem{
-			Link:     fileName,
-			Redirect: redirect,
-			Png:      b,
-		}
-		data, _ := json.Marshal(item)
-		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/navbar", address), bytes.NewReader(data))
 		req.AddCookie(prepareCookie(address))
-		req.Header.Add("Content-Type", "application/json")
 		resp, err := client.Do(req)
 		if err != nil {
 			fmt.Println("There was an error performing the desired request: ", err.Error())

@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -128,32 +129,53 @@ func (c *Controller) AddMenuItem(ctx *gin.Context) {
 @Router /admin/navbar
 */
 func (c *Controller) AddNavbarItem(ctx *gin.Context) {
+	file, err := ctx.FormFile("file")
+	if err != nil {
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	fh, err := file.Open()
+	if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	fb := make([]byte, file.Size)
+	var output bytes.Buffer
+	for {
+		n, err := fh.Read(fb)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+			return
+		}
+		output.Write(fb[:n])
+	}
 
 	var item storage.NavBarItem
-	err := ctx.ShouldBind(&item)
+	item = storage.NavBarItem{
+		Link: file.Filename,
+		Png:  fb,
+	}
+	err = ctx.ShouldBind(&item)
 	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
 	err = c.database.AddNavbarItem(item)
 	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
 
-	err = c.database.AddAsset(item.Link, item.Png)
+	err = c.database.AddAsset(item.File.Filename, fb)
 	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"Error": err.Error(),
-		})
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return
 	}
 
-	ctx.Data(200, "text", []byte("navbar item added."))
+	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Addition Successful!", "Color": "green"})
 }
 
 /*
@@ -163,20 +185,17 @@ func (c *Controller) AddNavbarItem(ctx *gin.Context) {
 @Router /admin/navbar
 */
 func (c *Controller) RemoveNavbarItem(ctx *gin.Context) {
-	itemName := ctx.Param("item_name")
-	err := c.database.RemoveNavbarItem(storage.Identifier(itemName))
-	if err != nil {
-		ctx.JSON(400, map[string]string{
-			"name":   itemName,
-			"status": "FAIL",
-			"Error":  err.Error(),
-		})
+	itemName, ok := ctx.Params.Get("item_name")
+	if !ok {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": errors.New("No navbar name passed."), "Color": "red"})
 		return
 	}
-	ctx.JSON(200, map[string]string{
-		"name":   itemName,
-		"status": "SUCCESS",
-	})
+	err := c.database.DeleteNavbarItem(storage.Identifier(itemName))
+	if err != nil {
+		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
+		return
+	}
+	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Deleted '" + itemName + "' Successfully!", "Color": "green"})
 
 }
 
@@ -184,10 +203,10 @@ func (c *Controller) ServeNavbarModify(ctx *gin.Context) {
 	navbar := c.database.GetNavBarLinks()
 	tableData := storage.AdminPage{Tables: map[string][]storage.TableData{}}
 	for i := range navbar {
-		tableData.Tables[storage.Topics[i]] = append(tableData.Tables[storage.Topics[i]],
+		tableData.Tables["items"] = append(tableData.Tables["items"],
 			storage.TableData{
 				DisplayName: navbar[i].Link,
-				Link:        fmt.Sprintf("/admin/options/%s", navbar[i].Link),
+				Link:        fmt.Sprintf("/admin/navbar/options/%s", navbar[i].Link),
 			},
 		)
 	}
@@ -338,6 +357,20 @@ func (c *Controller) ServeNewBlogPage(ctx *gin.Context) {
 }
 
 /*
+Serving the new blogpost page. Serves the editor with the method to POST a new document
+*/
+func (c *Controller) ServeNewNavbarItem(ctx *gin.Context) {
+
+	ctx.HTML(200, "navbar_editor", gin.H{
+		"navigation": gin.H{
+			"menu":    c.database.GetDropdownElements(),
+			"headers": c.database.GetNavBarLinks(),
+		},
+		"Post": true,
+	})
+}
+
+/*
 Reciever for the ServeNewBlogPage UI screen. Adds a new document to the database
 */
 func (c *Controller) MakeBlogPost(ctx *gin.Context) {
@@ -407,6 +440,20 @@ func (c *Controller) SaveFile(ctx *gin.Context) {
 	}
 
 	ctx.HTML(200, "upload_status", gin.H{"UpdateMessage": "Update Successful!", "Color": "green"})
+}
+
+// Serve the document deletion template
+func (c *Controller) NavbarOptions(ctx *gin.Context) {
+	id, found := ctx.Params.Get("id")
+	if !found {
+		ctx.HTML(400, "upload_status", gin.H{"UpdateMessage": "No ID selected!", "Color": "red"})
+		return
+	}
+
+	ctx.HTML(200, "post_options", gin.H{
+		"Link": fmt.Sprintf("/admin/navbar/%s", id),
+	})
+
 }
 
 // Serve the document deletion template

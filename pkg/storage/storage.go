@@ -57,9 +57,10 @@ type LinkPair struct {
 }
 
 type NavBarItem struct {
-	Png      []byte `json:"png"`
-	Link     string `json:"link"`
-	Redirect string `json:"redirect"`
+	Png      []byte                `json:"png"`
+	File     *multipart.FileHeader `form:"file"`
+	Link     string                `json:"link" form:"link"`
+	Redirect string                `json:"redirect" form:"redirect"`
 }
 
 type Asset struct {
@@ -223,6 +224,26 @@ func (s *SQLiteRepo) GetDropdownElements() []LinkPair {
 	return menuItems
 
 }
+
+/*
+Retrieve a dropdown element by its text name on the UI
+*/
+func (s *SQLiteRepo) GetDropdownElementByName(text string) (LinkPair, bool) {
+	rows := s.db.QueryRow("SELECT * FROM menu WHERE text = ?", text)
+	var item LinkPair
+	var id int
+	if err := rows.Scan(&id, &item.Link, &item.Text); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return item, false
+		}
+		log.Fatal(err)
+	}
+	return item, true
+
+}
+
+/*
+Get all nav bar items. Returns a list of NavBarItem structs with the png data, the file name, and the redirect location of the icon
 
 /*
 Get all nav bar items. Returns a list of NavBarItem structs with the png data, the file name, and the redirect location of the icon
@@ -446,6 +467,11 @@ func (s *SQLiteRepo) AddMenuItem(item LinkPair) error {
 	if err != nil {
 		return err
 	}
+	_, found := s.GetDropdownElementByName(item.Text)
+	if found {
+		tx.Rollback()
+		return errors.New("Row exists.")
+	}
 	stmt, _ := tx.Prepare("INSERT INTO menu(link, text) VALUES (?,?)")
 	_, err = stmt.Exec(item.Link, item.Text)
 	if err != nil {
@@ -579,7 +605,7 @@ func (s *SQLiteRepo) DeleteNavbarItem(id Identifier) error {
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("DELETE FROM navbar WHERE redirect=?")
+	stmt, _ := tx.Prepare("DELETE FROM navbar WHERE link=?")
 	_, err = stmt.Exec(id)
 	if err != nil {
 		tx.Rollback()

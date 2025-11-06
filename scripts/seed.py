@@ -15,7 +15,8 @@ URL = os.getenv("SITE_URL")
 admin_table = {
         "new": {
             "blog post": "/admin/posts",
-            "digital media": "/admin/upload"
+            "digital media": "/admin/upload",
+            "navbar item": "/admin/navbar/new"
             },
         "modify": {
             "blog post": "/admin/posts/all",

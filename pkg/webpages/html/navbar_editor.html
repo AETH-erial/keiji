@@ -1,0 +1,48 @@
+
+{{ define "patch_navbar_editor" }}
+<form hx-encoding='multipart/form-data' hx-patch='/admin/navbar'
+                 _='on htmx:xhr:progress(loaded, total) set #progress.value to (loaded/total)*100'>
+{{ end }}
+
+{{ define "post_navbar_editor" }}
+<form hx-encoding='multipart/form-data' hx-post='/admin/navbar'
+                 _='on htmx:xhr:progress(loaded, total) set #progress.value to (loaded/total)*100'>
+{{ end }}
+
+
+{{ define "navbar_editor" }}
+<!DOCTYPE html>
+<html lang="en">
+    <div class="container-fluid p-2 position-relative"
+        style="width: 80vw; max-width: 80%; background-color: rgb(22, 22, 22);">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm"></div>
+                <div class="container position-relative">
+                    <a style="color: white; height: fit-content; font-size: xx-large; font-weight: bold; font-family: monospace;">Editing/Making navbar item</a>
+                    <div class="col m-5">
+                        {{ if $.Post }}
+                            {{ template "post_navbar_editor" }}
+                        {{ else }}
+                            {{ template "patch_navbar_editor" }}
+                        {{ end }}
+                            <div class="row"
+                                style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                                <a>Redirect to:</a>
+                                <textarea name="redirect"
+                                    style="background-color: rgb(73, 73, 73); color: white;">{{ .Redirect }}</textarea>
+                            </div>
+                            <div class="row container p-2 m-2">
+                                <a>Add PNG:</a>
+                                <input type='file' name='file'>
+                            </div>
+                            <button type="submit">Send</button><div id="response"></div>
+                        </form>
+                    </div>
+                </div>
+                <div class="col-sm"></div>
+            </div>
+        </div>
+    </div>
+</html>
+{{ end }}
