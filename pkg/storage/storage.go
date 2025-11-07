@@ -666,11 +666,17 @@ func (s *SQLiteRepo) DeleteNavbarItem(id Identifier) error {
 		return err
 	}
 	stmt, _ := tx.Prepare("DELETE FROM navbar WHERE link=?")
-	_, err = stmt.Exec(id)
+	result, err := stmt.Exec(id)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected < 1 {
+		return ErrNotExists
+
+	}
+
 	tx.Commit()
 	return nil
 
