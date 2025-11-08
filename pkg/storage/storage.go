@@ -21,6 +21,7 @@ const CONFIGURATION = "configuration"
 const BLOG = "blog"
 const CREATIVE = "creative"
 const DIGITAL_ART = "digital_art"
+const MISC_ASSET = "misc_asset"
 const HOMEPAGE = "homepage"
 
 var Topics = []string{
@@ -28,6 +29,11 @@ var Topics = []string{
 	BLOG,
 	CREATIVE,
 	HOMEPAGE,
+}
+
+var ImageCategories = []string{
+	MISC_ASSET,
+	DIGITAL_ART,
 }
 
 type DatabaseSchema struct {
@@ -104,7 +110,7 @@ type Image struct {
 	File     *multipart.FileHeader `form:"file"`
 	Desc     string                `json:"description" form:"description"`
 	Created  string
-	Category string
+	Category string `json:"category" form:"category"`
 	Data     []byte
 }
 
@@ -112,11 +118,12 @@ type DocumentIO interface {
 	GetDocument(id Identifier) (Document, error)
 	GetImage(id Identifier) (Image, error)
 	GetAllImages() []Image
+	GetImagesByCategory(category string) []Image
 	UpdateDocument(doc Document) error
 	DeleteDocument(id Identifier) error
 	DeleteNavbarItem(id Identifier) error
 	AddDocument(doc Document) (Identifier, error)
-	AddImage(data []byte, title, desc string) (Identifier, error)
+	AddImage(data []byte, title, desc, category string) (Identifier, error)
 	AddAsset(name string, data []byte) error
 	AddAdminTableEntry(TableData, string) error
 	AddNavbarItem(NavBarItem) error
@@ -148,6 +155,19 @@ type ImageIO interface {
 
 type FilesystemImageIO struct {
 	RootDir string
+}
+
+/*
+create a new FilesystemImageIO struct
+*/
+func MustNewFilesystemImageIO(path string) FilesystemImageIO {
+	var filemode os.FileMode
+	filemode = 0775
+	err := os.MkdirAll(path, filemode)
+	if err != nil {
+		log.Fatalf("Error creating path: '%s' with permissions: '%d'. Error: %s\n", path, filemode, err.Error())
+	}
+	return FilesystemImageIO{RootDir: path}
 }
 
 /*
@@ -408,8 +428,8 @@ get image data from the images table
 func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	row := s.db.QueryRow("SELECT * FROM images WHERE id = ?", id)
 	var rowNum int
-	var title, desc, created string
-	if err := row.Scan(&rowNum, &id, &title, &desc, &created); err != nil {
+	var title, desc, created, category string
+	if err := row.Scan(&rowNum, &id, &title, &desc, &created, &category); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Image{}, ErrNotExists
 		}
@@ -419,7 +439,7 @@ func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
 	if err != nil {
 		return Image{}, err
 	}
-	return Image{Ident: id, Title: title, Desc: desc, Data: data, Created: created}, nil
+	return Image{Ident: id, Title: title, Desc: desc, Data: data, Created: created, Category: category}, nil
 }
 
 /*
@@ -434,7 +454,7 @@ func (s *SQLiteRepo) GetAllImages() []Image {
 	for rows.Next() {
 		var img Image
 		var rowNum int
-		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Desc, &img.Created)
+		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Desc, &img.Created, &img.Category)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -442,7 +462,33 @@ func (s *SQLiteRepo) GetAllImages() []Image {
 		if err != nil {
 			log.Fatal(err)
 		}
-		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created})
+		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created, Category: img.Category})
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return imgs
+}
+
+func (s *SQLiteRepo) GetImagesByCategory(category string) []Image {
+	rows, err := s.db.Query("SELECT * FROM images WHERE category = ?", category)
+	if err != nil {
+		log.Fatal(err)
+	}
+	imgs := []Image{}
+	for rows.Next() {
+		var img Image
+		var rowNum int
+		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Desc, &img.Created, &img.Category)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, err := s.imageIO.Get(img.Ident)
+		if err != nil {
+			log.Fatal(err)
+		}
+		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created, Category: img.Category})
 	}
 	err = rows.Err()
 	if err != nil {
@@ -459,13 +505,13 @@ Add an image to the database
 	:param desc: the description of the image, if any
 	:param data: the binary data for the image
 */
-func (s *SQLiteRepo) AddImage(data []byte, title string, desc string) (Identifier, error) {
+func (s *SQLiteRepo) AddImage(data []byte, title string, desc string, category string) (Identifier, error) {
 	id := newIdentifier()
 	err := s.imageIO.Put(data, id)
 	if err != nil {
 		return Identifier(""), err
 	}
-	_, err = s.db.Exec("INSERT INTO images (id, title, desc, created) VALUES (?,?,?,?)", string(id), title, desc, time.Now().String())
+	_, err = s.db.Exec("INSERT INTO images (id, title, desc, created, category) VALUES (?,?,?,?,?)", string(id), title, desc, time.Now().String(), category)
 	if err != nil {
 		return Identifier(""), err
 	}

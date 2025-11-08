@@ -108,7 +108,7 @@ func (c *Controller) ServeCreative(ctx *gin.Context) {
 // @Tags webpages
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
-	images := c.database.GetAllImages()
+	images := c.database.GetImagesByCategory(storage.DIGITAL_ART)
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
 			"headers": c.database.GetNavBarLinks(),

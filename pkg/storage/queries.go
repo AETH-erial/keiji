@@ -17,7 +17,8 @@ const imagesTable = `
 		id TEXT NOT NULL,
 		title TEXT NOT NULL,
 		desc TEXT NOT NULL,
-		created TEXT NOT NULL
+		created TEXT NOT NULL,
+		category TEXT NOT NULL
 	);
 	`
 const menuItemsTable = `

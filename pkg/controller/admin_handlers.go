@@ -398,6 +398,8 @@ func (c *Controller) ServeFileUpload(ctx *gin.Context) {
 			"menu":    c.database.GetDropdownElements(),
 			"headers": c.database.GetNavBarLinks(),
 		},
+		"Topics":       storage.ImageCategories,
+		"DefaultTopic": storage.DIGITAL_ART,
 	})
 }
 
@@ -433,7 +435,7 @@ func (c *Controller) SaveFile(ctx *gin.Context) {
 		}
 		output.Write(fb[:n])
 	}
-	_, err = c.database.AddImage(fb, img.Title, img.Desc)
+	_, err = c.database.AddImage(fb, img.Title, img.Desc, img.Category)
 	if err != nil {
 		ctx.HTML(500, "upload_status", gin.H{"UpdateMessage": err, "Color": "red"})
 		return

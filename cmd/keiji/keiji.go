@@ -94,7 +94,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	webserverDb := storage.NewSQLiteRepo(db, storage.FilesystemImageIO{RootDir: os.Getenv(env.IMAGE_STORE)})
+	path := os.Getenv(env.IMAGE_STORE)
+	if path == "" {
+		log.Fatalf("Environment variable: '%s' resolved to a null value: '%s'", env.IMAGE_STORE, path)
+	}
+	webserverDb := storage.NewSQLiteRepo(db, storage.MustNewFilesystemImageIO(path))
 	err = webserverDb.Migrate(storage.RequiredTables)
 	if err != nil {
 		log.Fatal(err)

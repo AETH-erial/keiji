@@ -9,6 +9,17 @@
                     <div class="row container p-2 m-2">
                         <input type='file' name='file'>
                     </div>
+                    <div class="row"
+                        style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                        <a>Category:</a>
+                        <select name="category" class="form-select"
+                            style="background-color: rgb(73, 73, 73); color: white; height: fit-content; font-size: larger; font-family: monospace;">
+                            <option selected>{{ .DefaultTopic }}</option>
+                            {{ range .Topics }}
+                            <option value="{{ . }}">{{ . }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
                     <div class="row container p-2 m-2">
                         <textarea name="title" wrap="soft" required="required" placeholder="Name of the piece?"></textarea>
                     </div>
