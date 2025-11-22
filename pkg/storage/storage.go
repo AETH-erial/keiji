@@ -229,15 +229,18 @@ func (s *SQLiteRepo) GetDropdownElements() []LinkPair {
 Retrieve a dropdown element by its text name on the UI
 */
 func (s *SQLiteRepo) GetMenuItemByName(link, text string) (LinkPair, bool) {
+	fmt.Printf("From GetMenuItemByName: Link: %s Text: %s\n", link, text)
 	rows := s.db.QueryRow("SELECT * FROM menu WHERE link = ? AND text = ?", link, text)
 	var item LinkPair
 	var id int
-	if err := rows.Scan(&id, &item.Link, &item.Text); err != nil {
+	err := rows.Scan(&id, &item.Link, &item.Text)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			return item, false
+		} else {
 			return item, false
 		}
 	}
-	log.Printf("%+v\n", item)
 	return item, true
 
 }
@@ -247,11 +250,13 @@ func (s *SQLiteRepo) GetAdminTableEntry(displayName, link, category string) (Tab
 	rows := s.db.QueryRow("SELECT * FROM admin WHERE display_name = ? AND link = ? AND category = ?", displayName, link, category)
 	var item TableData
 	var id int
-	if err := rows.Scan(&id, &item.DisplayName, &item.Link, &category); err != nil {
+	err := rows.Scan(&id, &item.DisplayName, &item.Link, &category)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return item, false
 		}
-		log.Fatal(err)
+		log.Printf("Error getting admin table entry: %s", err.Error())
+		return item, false
 	}
 	return item, true
 
@@ -262,11 +267,13 @@ func (s *SQLiteRepo) GetNavbarLink(link, redirect string) (NavBarItem, bool) {
 	rows := s.db.QueryRow("SELECT * FROM navbar WHERE link = ? AND redirect = ?", link, redirect)
 	var item NavBarItem
 	var id int
-	if err := rows.Scan(&id, &item.Png, &item.Link, &item.Redirect); err != nil {
+	err := rows.Scan(&id, &item.Png, &item.Link, &item.Redirect)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return item, false
 		}
-		log.Fatal(err)
+		log.Printf("Error scanning for item: %s", err.Error())
+		return item, false
 	}
 	return item, true
 
@@ -277,11 +284,13 @@ func (s *SQLiteRepo) GetAsset(name string) (Asset, bool) {
 	rows := s.db.QueryRow("SELECT * FROM assets WHERE name = ?", name)
 	var item Asset
 	var id int
-	if err := rows.Scan(&id, &item.Name, &item.Data); err != nil {
+	err := rows.Scan(&id, &item.Name, &item.Data)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return item, false
 		}
-		log.Fatal(err)
+		log.Printf("Error getting asset: %s", err.Error())
+		return item, false
 	}
 	return item, true
 
@@ -512,8 +521,10 @@ func (s *SQLiteRepo) AddMenuItem(item LinkPair) error {
 	if err != nil {
 		return err
 	}
-	_, found := s.GetMenuItemByName(item.Link, item.Text)
+	fmt.Printf("from AddMenuItem: %+v\n", item)
+	foundItem, found := s.GetMenuItemByName(item.Link, item.Text)
 	if found {
+		fmt.Printf("from error in AddMenuItem: %+v\n", foundItem)
 		tx.Rollback()
 		return ErrDuplicate
 	}
