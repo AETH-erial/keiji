@@ -27,3 +27,42 @@ function insertSelectedImage() {
 
     insertHtmlAtCursor(textarea, html);
 }
+
+
+function toggleDropdown(el) {
+    const options = el.parentElement.querySelector('.options');
+    const open = options.style.display === "block";
+    document.querySelectorAll('.image-select .options').forEach(o => o.style.display = "none");
+    options.style.display = open ? "none" : "block";
+}
+
+function chooseImage(optionEl, id) {
+    const container = optionEl.closest('.image-select');
+
+    // set visible label
+    container.querySelector('.selected span').textContent = id;
+
+    // set real select value
+    container.querySelector('.real-select').value = id;
+
+    // close dropdown
+    container.querySelector('.options').style.display = "none";
+}
+
+// close dropdown when clicking outside
+document.addEventListener("click", function (e) {
+    if (!e.target.closest(".image-select")) {
+        document.querySelectorAll('.image-select .options').forEach(o => o.style.display = "none");
+    }
+});
+
+
+function showPreview(src) {
+    const box = document.getElementById('previewBox');
+    box.innerHTML = `<img src="${src}">`;
+    box.style.display = 'block';
+}
+
+function hidePreview() {
+    document.getElementById('previewBox').style.display = 'none';
+}

@@ -59,19 +59,32 @@
                                     style="background-color: rgb(73, 73, 73); color: white;">{{ .Body }}</textarea>
                             </div>
                             <div class="row"
-                                style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
-                                
-                                <a>Insert an image:</a>
+                                style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: large; font-family: monospace;">
+                                <div class="image-select">
+                                    <!-- visible dropdown button -->
+                                    <div class="selected" onclick="toggleDropdown(this)">
+                                        <span>Select an image</span>
+                                    </div>
 
-                                <select id="imageSelect" class="form-select"
-                                    style="background-color: rgb(73, 73, 73); color: white; height: fit-content; font-size: larger; font-family: monospace;">
-                                    <option selected value="">select an image to insert</option>
-                                    {{ range .ImageIds }}
-                                    <option value="{{ . }}">{{ . }}</option>
-                                    {{ end }}
-                                </select>
+                                    <!-- dropdown list -->
+                                    <div class="options">
+                                        {{ range .ImageIds }}
+                                        <div class="option" onclick="chooseImage(this, '{{ . }}')">
+                                            <img src="/api/v1/images/{{ . }}">
+                                            <span>{{ . }}</span>
+                                        </div>
+                                        {{ end }}
+                                    </div>
 
-                                <button 
+                                    <!-- REAL select for form submission -->
+                                    <select name="imageId" class="real-select" id="imageSelect">
+                                        <option value="">Select an image</option>
+                                        {{ range .ImageIds }}
+                                        <option value="{{ . }}">{{ . }}</option>
+                                        {{ end }}
+                                    </select>
+                                </div>
+                                <button
                                     type="button"
                                     hx-on:click="insertSelectedImage()">
                                     Insert Image
