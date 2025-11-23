@@ -566,11 +566,17 @@ func TestAddMenuItem(t *testing.T) {
 				// assert.Equal(expected, actual)
 				assert.Equal(t, tc.err, err)
 			}
-			rows := testDb.db.QueryRow("SELECT * FROM menu WHERE link = ? AND text = ?", tc.input[i].Link, tc.input[i].Text)
-			var got LinkPair
-			var id int
-			if err := rows.Scan(&id, &got.Link, &got.Text); err != nil {
-				t.Errorf("failed: %s", err.Error())
+			rows, err := testDb.db.Query("SELECT * FROM menu")
+			var got []LinkPair
+			defer rows.Close()
+			for rows.Next() {
+				var item LinkPair
+				var id int
+				err = rows.Scan(&id, &item.Link, &item.Text)
+				if err != nil {
+					t.Errorf("failed: %s", err.Error())
+				}
+				got = append(got, item)
 			}
 			assert.Equal(t, tc.input, got)
 		}
@@ -581,13 +587,13 @@ func TestAddNavbarItem(t *testing.T) {
 		input []NavBarItem
 		err   error
 	}
-	testDb, db := newTestDb(t.TempDir(), true)
+	testDb, _ := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			input: []NavBarItem{
 				{
-					Redirect: "",
-					Link:     "",
+					Redirect: "http://whatever.com",
+					Link:     "api/stuff/picture.jpeg",
 					Png:      []byte(""),
 				},
 			},
@@ -600,7 +606,7 @@ func TestAddNavbarItem(t *testing.T) {
 			}
 
 		}
-		rows, err := db.Query("SELECT * FROM navbar")
+		rows, err := testDb.db.Query("SELECT * FROM navbar")
 		var got []NavBarItem
 		defer rows.Close()
 		for rows.Next() {
@@ -621,7 +627,7 @@ func TestAddAsset(t *testing.T) {
 		input []Asset
 		err   error
 	}
-	testDb, db := newTestDb(t.TempDir(), true)
+	testDb, _ := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			input: []Asset{
@@ -639,7 +645,7 @@ func TestAddAsset(t *testing.T) {
 			}
 
 		}
-		rows, err := db.Query("SELECT * FROM assets")
+		rows, err := testDb.db.Query("SELECT * FROM assets")
 		var assets []Asset
 		defer rows.Close()
 		for rows.Next() {
@@ -699,7 +705,7 @@ func TestAddAdminTableEntry(t *testing.T) {
 		input AdminPage
 		err   error
 	}
-	testDb, db := newTestDb(t.TempDir(), true)
+	testDb, _ := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
 			input: AdminPage{
@@ -723,7 +729,7 @@ func TestAddAdminTableEntry(t *testing.T) {
 				}
 			}
 		}
-		rows, err := db.Query("SELECT * FROM admin")
+		rows, err := testDb.db.Query("SELECT * FROM admin")
 		got := AdminPage{Tables: map[string][]TableData{}}
 		defer rows.Close()
 		for rows.Next() {

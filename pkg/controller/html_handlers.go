@@ -2,6 +2,7 @@ package controller
 
 import (
 	"html/template"
+	"math/rand"
 	"net/http"
 
 	"git.aetherial.dev/aeth/keiji/pkg/storage"
@@ -76,7 +77,8 @@ func (c *Controller) ServeHome(ctx *gin.Context) {
 			Body: "Under construction. Sry :(",
 		}
 	} else {
-		content = home[0]
+		index := rand.Intn(len(home))
+		content = home[index]
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
