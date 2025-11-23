@@ -6,9 +6,6 @@
         <div class="col" style="min-width: 80vw; background-color: rgb(22, 22, 22); font-family: monospace;">
             <form hx-encoding='multipart/form-data' hx-post='/admin/images/upload'
                  _='on htmx:xhr:progress(loaded, total) set #progress.value to (loaded/total)*100'>
-                    <div class="row container p-2 m-2">
-                        <input type='file' name='file'>
-                    </div>
                     <div class="row"
                         style="background-color: rgb(22, 22, 22); color: white; height: fit-content; font-size: larger; font-family: monospace;">
                         <a>Category:</a>
@@ -25,6 +22,9 @@
                     </div>
                     <div class="row container p-2 m-2">
                         <textarea name="description" wrap="soft" required="required" placeholder="What would you like to say about it?"></textarea>
+                    </div>
+                    <div class="row container p-2 m-2">
+                        <input type='file' name='file'>
                     </div>
                     <div class="row container p-2 m-2">
                         <button>

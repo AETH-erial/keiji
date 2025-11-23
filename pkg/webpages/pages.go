@@ -56,7 +56,7 @@ func (f FilesystemWebpages) Open(file string) (fs.File, error) {
 	filePath := path.Join(f.Webroot, file)
 	fh, err := os.Open(filePath)
 	if err != nil {
-		fmt.Printf("Error opening the file: %s because %s", filePath, err)
+		fmt.Printf("Error opening the file: %s because %s\n", filePath, err)
 		return nil, os.ErrNotExist
 	}
 	return fh, nil

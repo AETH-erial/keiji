@@ -306,6 +306,12 @@ func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
 		})
 		return
 	}
+	images := c.database.GetAllImages()
+	imgIds := []storage.Identifier{}
+	for i := range images {
+		imgIds = append(imgIds, images[i].Ident)
+	}
+
 	ctx.HTML(200, "blogpost_editor", gin.H{
 		"navigation": gin.H{
 			"menu":    c.database.GetDropdownElements(),
@@ -317,6 +323,7 @@ func (c *Controller) GetBlogPostEditor(ctx *gin.Context) {
 		"DefaultTopic": doc.Category,
 		"Created":      doc.Created,
 		"Body":         doc.Body,
+		"ImageIds":     imgIds,
 	})
 }
 

@@ -19,9 +19,13 @@ test:
 	go test -v ./...
 
 
-coverage:
+coverage-html:
+	mkdir -p coverage/
 	go test -v ./... -covermode=count -coverpkg=./... -coverprofile coverage/coverage.out
 	go tool cover -html coverage/coverage.out -o coverage/coverage.html
+
+coverage:
+	go test ./... -cover
 
 
 dev-run:

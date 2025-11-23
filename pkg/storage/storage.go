@@ -469,7 +469,8 @@ func (s *SQLiteRepo) GetAllImages() []Image {
 		}
 		b, err := s.imageIO.Get(img.Ident)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("Failed to get image: %+v\nError: %s\n", img, err.Error())
+			continue
 		}
 		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created, Category: img.Category})
 	}
@@ -495,7 +496,7 @@ func (s *SQLiteRepo) GetImagesByCategory(category string) []Image {
 		}
 		b, err := s.imageIO.Get(img.Ident)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("Failed to get image: %+v\nError: %s\n", img, err.Error())
 		}
 		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created, Category: img.Category})
 	}

@@ -298,11 +298,12 @@ func TestGetImage(t *testing.T) {
 	for _, tc := range []testcase{
 		{
 			seed: Image{
-				Ident:   Identifier("abc123"),
-				Title:   "xyz098",
-				Desc:    "description",
-				Created: "2024-12-31",
-				Data:    []byte("abc123xyz098"),
+				Ident:    Identifier("abc123"),
+				Title:    "xyz098",
+				Desc:     "description",
+				Created:  "2024-12-31",
+				Category: "homepage",
+				Data:     []byte("abc123xyz098"),
 			},
 			shouldSeed: true,
 			err:        nil,
@@ -316,7 +317,7 @@ func TestGetImage(t *testing.T) {
 		},
 	} {
 		if tc.shouldSeed {
-			_, err := db.Exec("INSERT INTO images (id, title, desc, created) VALUES (?,?,?,?)", string(tc.seed.Ident), tc.seed.Title, tc.seed.Desc, "2024-12-31")
+			_, err := db.Exec("INSERT INTO images (id, title, desc, created, category) VALUES (?,?,?,?,?)", string(tc.seed.Ident), tc.seed.Title, tc.seed.Desc, "2024-12-31", tc.seed.Category)
 			if err != nil {
 				t.Error(err)
 			}
@@ -340,24 +341,26 @@ func TestGetAllImages(t *testing.T) {
 		{
 			seed: []Image{
 				{
-					Ident:   Identifier("abc123"),
-					Title:   "xyz098",
-					Data:    []byte("abc123xyz098"),
-					Created: "2024-12-31",
-					Desc:    "description",
+					Ident:    Identifier("abc123"),
+					Title:    "xyz098",
+					Data:     []byte("abc123xyz098"),
+					Created:  "2024-12-31",
+					Desc:     "description",
+					Category: "homepage",
 				},
 				{
-					Ident:   Identifier("xyz098"),
-					Title:   "abc123",
-					Data:    []byte("abc123xyz098"),
-					Created: "2024-12-31",
-					Desc:    "description",
+					Ident:    Identifier("xyz098"),
+					Title:    "abc123",
+					Data:     []byte("abc123xyz098"),
+					Created:  "2024-12-31",
+					Desc:     "description",
+					Category: "homepage",
 				},
 			},
 		},
 	} {
 		for i := range tc.seed {
-			_, err := db.Exec("INSERT INTO images (id, title, desc, created) VALUES (?,?,?,?)", string(tc.seed[i].Ident), tc.seed[i].Title, tc.seed[i].Desc, tc.seed[i].Created)
+			_, err := db.Exec("INSERT INTO images (id, title, desc, created, category) VALUES (?,?,?,?,?)", string(tc.seed[i].Ident), tc.seed[i].Title, tc.seed[i].Desc, tc.seed[i].Created, tc.seed[i].Category)
 			if err != nil {
 				t.Error(err)
 			}
@@ -515,20 +518,22 @@ func TestUpdateDocument(t *testing.T) {
 func TestAddImage(t *testing.T) {
 
 	type testcase struct {
-		data  []byte
-		title string
-		desc  string
-		err   error
+		data     []byte
+		title    string
+		desc     string
+		category string
+		err      error
 	}
 	testDb, _ := newTestDb(t.TempDir(), true)
 	for _, tc := range []testcase{
 		{
-			data:  []byte("abc123xyz098"),
-			title: "dont matter",
-			desc:  "also dont matter",
+			data:     []byte("abc123xyz098"),
+			title:    "dont matter",
+			desc:     "also dont matter",
+			category: "homepage",
 		},
 	} {
-		id, err := testDb.AddImage(tc.data, tc.title, tc.desc)
+		id, err := testDb.AddImage(tc.data, tc.title, tc.desc, tc.category)
 		if err != nil {
 			assert.Equal(t, tc.err, err)
 		} else {
