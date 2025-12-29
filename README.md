@@ -9,3 +9,7 @@ This is my personal blogging site, in lieu of having social media like Facebook,
 - cool mid 2000s website feel
 
 
+### Todo's 
+- add a tools/demo section
+
+
