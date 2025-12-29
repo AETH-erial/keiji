@@ -114,6 +114,15 @@ type Image struct {
 	Data     []byte
 }
 
+type Tool struct {
+	Ident             Identifier
+	Name              string
+	Desc              string
+	ImageLink         string
+	UserInterfaceLink string
+	OsPath            string
+}
+
 type DocumentIO interface {
 	GetDocument(id Identifier) (Document, error)
 	GetImage(id Identifier) (Image, error)
@@ -134,6 +143,7 @@ type DocumentIO interface {
 	GetNavBarLinks() []NavBarItem
 	GetAssets() []Asset
 	GetAdminTables() AdminPage
+	GetTools() []Tool
 }
 
 var (
@@ -223,6 +233,24 @@ func (r *SQLiteRepo) Migrate(seedQueries []string) error {
 		}
 	}
 	return nil
+}
+
+// Gets the tool table from the database
+func (s *SQLiteRepo) GetTools() []Tool {
+	rows, err := s.db.Query("SELECT * FROM tools")
+	var toolItems []Tool
+	defer rows.Close()
+	for rows.Next() {
+		var id int
+		var item Tool
+		err = rows.Scan(&id, &item.Ident, &item.Name, &item.Desc, &item.ImageLink, &item.UserInterfaceLink, &item.OsPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		toolItems = append(toolItems, item)
+	}
+	return toolItems
+
 }
 
 /*

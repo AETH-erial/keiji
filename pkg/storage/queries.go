@@ -50,5 +50,16 @@ const adminTable = `
 		category TEXT NOT NULL
 	);
 	`
+const toolsTable = `
+	CREATE TABLE IF NOT EXISTS tools(
+		row INTEGER PRIMARY KEY AUTOINCREMENT,
+		id TEXT NOT NULL,
+		name TEXT NOT NULL,
+		desc TEXT NOT NULL,
+		image_link TEXT NOT NULL,
+		user_interface_link TEXT NOT NULL,
+		os_path TEXT NOT NULL
+	);
+	`
 
-var RequiredTables = []string{postsTable, imagesTable, menuItemsTable, navbarItemsTable, assetTable, adminTable}
+var RequiredTables = []string{postsTable, imagesTable, menuItemsTable, navbarItemsTable, assetTable, adminTable, toolsTable}

@@ -27,7 +27,8 @@ menu = {
         "//Administrator": "/admin/panel",
         "//Creative Writing": "/creative",
         "//Black Box": "/blog",
-        "//Digital Art": "/digital"
+        "//Digital Art": "/digital",
+        "//Tools": "/tools"
         }
 
 
