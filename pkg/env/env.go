@@ -93,17 +93,18 @@ verify all environment vars passed in are set
 
 	:param vars: array of strings to verify
 */
-func LoadAndVerifyEnv(path string, vars map[string]string) error {
+func LoadAndVerifyEnv(path string, vars map[string]string) []string {
 
 	err := godotenv.Load(path)
 	if err != nil {
-		return err
+		fmt.Printf("Non-fatal error raised: %s\n", err.Error())
 	}
 
+	missing := []string{}
 	for k := range vars {
 		if os.Getenv(k) == "" {
-			return &EnvNotSet{NotSet: k}
+			missing = append(missing, k)
 		}
 	}
-	return nil
+	return missing
 }

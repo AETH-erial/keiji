@@ -44,9 +44,9 @@ func main() {
 		fmt.Println("Blank template written to: .env.template")
 		os.Exit(0)
 	}
-	err := env.LoadAndVerifyEnv(envPath, env.REQUIRED_VARS)
-	if err != nil {
-		log.Fatal("Error when loading env file: ", err)
+	missing := env.LoadAndVerifyEnv(envPath, env.REQUIRED_VARS)
+	if len(missing) != 0 {
+		log.Fatalf("Error when loading/parsing environment variables: %s\n", missing)
 	}
 	var srcOpt webpages.ServiceOption
 	switch contentMode {
