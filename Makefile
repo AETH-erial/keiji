@@ -19,6 +19,7 @@ install:
 	&& sudo cp ./build/linux/$(SEED_CMD)/$(SEED_CMD) /usr/local/bin/ \
 	&& sudo cp ./build/linux/$(WEBSERVER)/$(WEBSERVER) /usr/local/bin/
 
+
 format:
 	go fmt ./...
 
