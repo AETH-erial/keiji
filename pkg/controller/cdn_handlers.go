@@ -31,6 +31,10 @@ func (c *Controller) ServeImage(ctx *gin.Context) {
 			"msg":   err.Error(),
 		})
 	}
+	if path.Ext(css) == "webm" {
+		ctx.Data(200, "video/webm", b)
+		return
+	}
 	ctx.Data(200, "image/jpeg", b)
 }
 
