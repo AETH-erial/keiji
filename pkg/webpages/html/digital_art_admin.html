@@ -1,0 +1,53 @@
+{{ define "digital_art_admin_list" }}
+<div class="container-fluid p-3" style="color: white; font-family: monospace;">
+    <h1>Modify Digital Art</h1>
+    {{ range .Images }}
+    <div class="row p-3 m-2 rounded" style="background-color: rgb(22, 22, 22);">
+        <div class="col-sm-3">
+            {{ if eq .MediaType "video/webm" }}
+            <video src="/api/v1/images/{{ .Ident }}" controls muted preload="metadata" aria-label="{{ .Title }}" class="img-fluid"></video>
+            {{ else }}
+            <img src="/api/v1/images/{{ .Ident }}" alt="{{ .Title }}" loading="lazy" class="img-fluid">
+            {{ end }}
+        </div>
+        <div class="col-sm">
+            <h2>{{ .Title }}</h2>
+            <p style="white-space: pre-wrap;">{{ .Desc }}</p>
+            <a href="/admin/digital/{{ .Ident }}" hx-get="/admin/digital/{{ .Ident }}" hx-target="#main">Edit</a>
+        </div>
+    </div>
+    {{ else }}
+    <p>No digital art found.</p>
+    {{ end }}
+</div>
+{{ end }}
+
+{{ define "digital_art_admin_editor" }}
+<div class="container p-3 rounded" style="max-width: 80vw; background-color: rgb(22, 22, 22); color: white; font-family: monospace;">
+    <h1>Edit Digital Art</h1>
+    <a href="/admin/digital" hx-get="/admin/digital" hx-target="#main">Back to digital art</a>
+    <div class="my-3">
+        {{ if eq .MediaType "video/webm" }}
+        <video src="/api/v1/images/{{ .Ident }}" controls muted preload="metadata" aria-label="{{ .Title }}" class="img-fluid" style="max-height: 50vh;"></video>
+        {{ else }}
+        <img src="/api/v1/images/{{ .Ident }}" alt="{{ .Title }}" class="img-fluid" style="max-height: 50vh;">
+        {{ end }}
+    </div>
+    <form action="/admin/digital/{{ .Ident }}" method="post" hx-post="/admin/digital/{{ .Ident }}" hx-target="#digital-art-response" hx-swap="innerHTML" hx-on::before-swap="if (event.detail.xhr.status >= 400) event.detail.shouldSwap = true">
+        <div class="mb-3">
+            <label for="digital-art-title" class="form-label">Title</label>
+            <textarea id="digital-art-title" name="title" class="form-control" required>{{ .Title }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="digital-art-description" class="form-label">Description</label>
+            <textarea id="digital-art-description" name="description" class="form-control" rows="5">{{ .Desc }}</textarea>
+        </div>
+        <button type="submit">Save changes</button>
+        <div id="digital-art-response" role="status" aria-live="polite"></div>
+    </form>
+    <div class="mt-4">
+        <button type="button" hx-delete="/admin/digital/{{ .Ident }}" hx-target="#main" hx-swap="innerHTML" hx-confirm="Remove this listing from the digital art page? The media file and links in posts will remain available." hx-on::before-swap="if (event.detail.xhr.status >= 400) event.detail.shouldSwap = true">Remove listing</button>
+        <p>Removes it from the gallery; the media remains available to posts.</p>
+    </div>
+</div>
+{{ end }}

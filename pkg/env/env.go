@@ -20,8 +20,19 @@ const HOST_ADDR = "HOST_ADDR"
 const USE_SSL = "USE_SSL"
 const CHAIN = "CHAIN"
 const KEY = "KEY"
+const SQLITE_PATH = "SQLITE_PATH"
+
+// SQLitePath returns the configured database path, preserving the historical
+// working-directory default when no path is configured.
+func SQLitePath() string {
+	if p := os.Getenv(SQLITE_PATH); p != "" {
+		return p
+	}
+	return "sqlite.db"
+}
 
 var OPTION_VARS = map[string]string{
+	SQLITE_PATH: "#SQLite database path (default: sqlite.db in the working directory)",
 	IMAGE_STORE: "#the location for keiji to store the images uploaded (string)",
 	WEB_ROOT:    "#the location to pull HTML and various web assets from. Only if using 'keiji -content fs' (string)",
 	CHAIN:       "#the path to the SSL public key chain (string)",

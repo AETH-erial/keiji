@@ -13,12 +13,41 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"git.aetherial.dev/aeth/keiji/pkg/auth"
 	"git.aetherial.dev/aeth/keiji/pkg/controller"
 	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+// newRequest sends an Origin matching the target for unsafe requests. Never use
+// a caller-provided Origin or include URL credentials, paths, queries or fragments.
+func newRequest(method, target string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, target, body)
+	if err != nil {
+		return nil, err
+	}
+	u := req.URL
+	if u.Opaque != "" || u.User != nil || u.Hostname() == "" ||
+		(!strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https")) {
+		return nil, fmt.Errorf("invalid HTTP target URL: %q", target)
+	}
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+	default:
+		req.Header.Set("Origin", strings.ToLower(u.Scheme)+"://"+u.Host)
+	}
+	return req, nil
+}
+
+// Treat redirects as errors at the call site. In particular, do not replay
+// credentials, cookies or mutation bodies at a redirect destination.
+func newHTTPClient() *http.Client {
+	return &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+}
 
 func newfileUploadRequest(uri string, params map[string]string, paramName, path string) (*http.Request, error) {
 	file, err := os.Open(path)
@@ -46,16 +75,22 @@ func newfileUploadRequest(uri string, params map[string]string, paramName, path 
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", uri, body)
+	req, err := newRequest(http.MethodPost, uri, body)
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return req, err
 }
 
 // authenticate and get the cookie needed to make updates
 func authenticate(url, username, password string) *http.Cookie {
-	client := http.Client{}
+	client := newHTTPClient()
 	b, _ := json.Marshal(auth.Credentials{Username: username, Password: password})
-	req, _ := http.NewRequest(http.MethodPost, url, bytes.NewReader(b))
+	req, err := newRequest(http.MethodPost, url, bytes.NewReader(b))
+	if err != nil {
+		log.Fatal("auth failed: ", err)
+	}
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -80,10 +115,10 @@ func authenticate(url, username, password string) *http.Cookie {
 func prepareCookie(address string) *http.Cookie {
 
 	parsedAddr, err := url.Parse(address)
-	dn := parsedAddr.Hostname()
 	if err != nil {
 		log.Fatal("unparseable address: ", address, " error: ", err)
 	}
+	dn := parsedAddr.Hostname()
 	var preparedCookie *http.Cookie
 	if cookie == "" {
 		log.Fatal("Cookie cannot be empty.")
@@ -112,7 +147,7 @@ func main() {
 	flag.StringVar(&cookie, "cookie", "", "pass a cookie to bypass direct authentication")
 	flag.Parse()
 
-	client := http.Client{}
+	client := newHTTPClient()
 
 	switch cmd {
 	case "auth":
@@ -130,7 +165,10 @@ func main() {
 			Data: b,
 		}
 		data, _ := json.Marshal(item)
-		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/asset", address), bytes.NewReader(data))
+		req, err := newRequest(http.MethodPost, fmt.Sprintf("%s/admin/asset", address), bytes.NewReader(data))
+		if err != nil {
+			log.Fatal(err)
+		}
 		req.AddCookie(prepareCookie(address))
 		req.Header.Add("Content-Type", "application/json")
 		resp, err := client.Do(req)
@@ -174,7 +212,10 @@ func main() {
 		os.Exit(0)
 	case "menu":
 		b, _ := json.Marshal(storage.LinkPair{Text: text, Link: redirect})
-		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/menu", address), bytes.NewReader(b))
+		req, err := newRequest(http.MethodPost, fmt.Sprintf("%s/admin/menu", address), bytes.NewReader(b))
+		if err != nil {
+			log.Fatal(err)
+		}
 		req.AddCookie(prepareCookie(address))
 		req.Header.Add("Content-Type", "application/json")
 		resp, err := client.Do(req)
@@ -195,7 +236,10 @@ func main() {
 		adminPage := storage.AdminPage{Tables: tables}
 		adminPage.Tables[col] = append(adminPage.Tables[col], storage.TableData{Link: redirect, DisplayName: text})
 		b, _ := json.Marshal(adminPage)
-		req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/admin/panel", address), bytes.NewReader(b))
+		req, err := newRequest(http.MethodPost, fmt.Sprintf("%s/admin/panel", address), bytes.NewReader(b))
+		if err != nil {
+			log.Fatal(err)
+		}
 		req.AddCookie(prepareCookie(address))
 		req.Header.Add("Content-Type", "application/json")
 		resp, err := client.Do(req)

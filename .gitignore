@@ -9,7 +9,7 @@ build/linux/keiji-ctl/*
 html/assets/images/*
 
 
-sqlite.db
+*.db
 
 # ignoring nohup.out file
 nohup.out

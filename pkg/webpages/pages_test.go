@@ -82,3 +82,14 @@ func TestReadToString(t *testing.T) {
 	assert.Equal(t, string(data), got)
 
 }
+
+func TestVideoHighlightUsesCardHover(t *testing.T) {
+	template := ReadToString(content, "html/digital_art.html")
+	css := ReadToString(content, "cdn/custom.css")
+	for _, want := range []string{"media-card", "video-highlight", "autoplay muted loop", "{{ .Title }}", "{{ .Desc }}"} {
+		assert.Contains(t, template, want)
+	}
+	for _, want := range []string{".media-card:hover .video-highlight", ".media-card:focus-within .video-highlight", "pointer-events: auto", "opacity: 1"} {
+		assert.Contains(t, css, want)
+	}
+}

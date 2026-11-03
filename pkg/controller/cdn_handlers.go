@@ -1,12 +1,14 @@
 package controller
 
 import (
-	"fmt"
+	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"git.aetherial.dev/aeth/keiji/pkg/storage"
 	"github.com/gin-gonic/gin"
@@ -17,25 +19,46 @@ import (
 // @Tags cdn
 // @Router /images/{file} [get]
 func (c *Controller) ServeImage(ctx *gin.Context) {
-	f, exist := ctx.Params.Get("file")
-	if !exist {
-		ctx.JSON(404, map[string]string{
-			"Error": "the requested file could not be found",
-		})
-	}
-	css := fmt.Sprintf("%s/%s", storage.GetImageStore(), f)
-	b, err := os.ReadFile(css)
-	if err != nil {
-		ctx.JSON(500, map[string]string{
-			"Error": "Could not serve the requested file",
-			"msg":   err.Error(),
-		})
-	}
-	if path.Ext(css) == "webm" {
-		ctx.Data(200, "video/webm", b)
+	id, exists := ctx.Params.Get("file")
+	if !exists || id == "" {
+		ctx.JSON(http.StatusNotFound, gin.H{"Error": "the requested file could not be found"})
 		return
 	}
-	ctx.Data(200, "image/jpeg", b)
+	var image storage.Image
+	var content io.ReadSeeker
+	var file storage.ReadSeekCloser
+	var err error
+	if opener, ok := c.database.(interface {
+		OpenImage(storage.Identifier) (storage.Image, storage.ReadSeekCloser, error)
+	}); ok {
+		image, file, err = opener.OpenImage(storage.Identifier(id))
+		if err == nil && file == nil {
+			err = errors.New("image stream is nil")
+		}
+		if file != nil {
+			defer file.Close()
+			content = file
+		}
+	} else {
+		// Compatibility for repositories that only implement DocumentIO.
+		image, err = c.database.GetImage(storage.Identifier(id))
+		content = bytes.NewReader(image.Data)
+	}
+	if err != nil {
+		if errors.Is(err, storage.ErrNotExists) || errors.Is(err, os.ErrNotExist) {
+			ctx.JSON(http.StatusNotFound, gin.H{"Error": "the requested file could not be found"})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"Error": "Could not serve the requested file"})
+		}
+		return
+	}
+	mediaType := image.MediaType
+	if mediaType == "" {
+		mediaType = "application/octet-stream"
+	}
+	ctx.Header("Content-Type", mediaType)
+	ctx.Header("X-Content-Type-Options", "nosniff")
+	http.ServeContent(ctx.Writer, ctx.Request, "", time.Time{}, content)
 }
 
 // @Name ServeAsset
@@ -50,7 +73,17 @@ func (c *Controller) ServeAsset(ctx *gin.Context) {
 		})
 		return
 	}
-	assets := c.database.GetAssets()
+	var assets []storage.Asset
+	if reader, ok := c.database.(storage.DocumentListReader); ok {
+		var err error
+		assets, err = reader.GetAssetsWithError()
+		if err != nil {
+			htmlListError(ctx, err)
+			return
+		}
+	} else {
+		assets = c.database.GetAssets()
+	}
 	for i := range assets {
 		if strings.Contains(assets[i].Name, f) {
 			ctx.Data(200, "image/png", assets[i].Data)
@@ -95,6 +128,7 @@ func (c *Controller) ServeGeneric(ctx *gin.Context) {
 		})
 		return
 	}
+	defer fh.Close()
 	b, err := io.ReadAll(fh)
 	if err != nil {
 		ctx.JSON(500, map[string]string{

@@ -15,12 +15,17 @@ function insertSelectedImage() {
     const imageId = select.value;
 
     if (!imageId) {
-        alert("Please select an image first.");
+        alert("Please select media first.");
         return;
     }
 
+    const mediaType = select.selectedOptions[0].dataset.mediaType;
+    const src = `/api/v1/images/${encodeURIComponent(imageId)}`;
+    const media = mediaType === "video/webm"
+        ? `<video src="${src}" class="rounded img-fluid" controls preload="metadata"></video>`
+        : `<img src="${src}" class="rounded img-fluid" alt="">`;
     const html = `<div class="text-center">
-<img src="/api/v1/images/${imageId}" class="rounded img-fluid">
+${media}
 </div>`;
 
     const textarea = document.getElementById("myTextarea");
@@ -36,7 +41,8 @@ function toggleDropdown(el) {
     options.style.display = open ? "none" : "block";
 }
 
-function chooseImage(optionEl, id) {
+function chooseImage(optionEl) {
+    const id = optionEl.dataset.id;
     const container = optionEl.closest('.image-select');
 
     // set visible label

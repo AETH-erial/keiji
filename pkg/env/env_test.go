@@ -42,6 +42,7 @@ func TestWriteTemplate(t *testing.T) {
 		USE_SSL,
 		CHAIN,
 		KEY,
+		SQLITE_PATH,
 	}
 	for i := range want {
 
@@ -50,4 +51,15 @@ func TestWriteTemplate(t *testing.T) {
 		}
 	}
 
+}
+
+func TestSQLitePath(t *testing.T) {
+	t.Setenv(SQLITE_PATH, "")
+	if got := SQLitePath(); got != "sqlite.db" {
+		t.Fatalf("default SQLite path = %q", got)
+	}
+	t.Setenv(SQLITE_PATH, "/data/keiji.db")
+	if got := SQLitePath(); got != "/data/keiji.db" {
+		t.Fatalf("configured SQLite path = %q", got)
+	}
 }

@@ -4,11 +4,15 @@
 <html lang="en">
     <div class="row container-fluid m-0 p-0">
         <div class="col container-fluid" style="background-color: black;"></div>
-        <img src="/api/v1/images/{{ .Ident }}" loading="lazy" class="img-fluid m-0 p-0 col-auto" style="background-color: black; max-height: 70vh;">
+        {{ if eq .MediaType "video/webm" }}
+        <video src="/api/v1/images/{{ .Ident }}" autoplay muted loop playsinline preload="metadata" aria-label="{{ .Title }}" class="img-fluid m-0 p-0 col-auto" style="background-color: black; max-height: 70vh;"></video>
+        {{ else }}
+        <img src="/api/v1/images/{{ .Ident }}" alt="{{ .Title }}" loading="lazy" class="img-fluid m-0 p-0 col-auto" style="background-color: black; max-height: 70vh;">
+        {{ end }}
         <div class="col container-fluid" style="background-color: black;"></div>
     </div>
-    <a href="#">
-        <div class="mask" style="background-color: hsla(0, 0%, 98%, 0.2)">
+    {{ if ne .MediaType "video/webm" }}<a href="#">{{ end }}
+        <div class="mask{{ if eq .MediaType "video/webm" }} video-highlight{{ end }}" style="background-color: hsla(0, 0%, 98%, 0.2)">
             <div class="row align-items-center" style="font-family: monospace; color: white; min-height: 100%;">
                 <div class="col"></div>
                 <div class="col-auto">
@@ -22,7 +26,7 @@
                 <div class="col"></div>
             </div>
         </div>
-    </a>
+    {{ if ne .MediaType "video/webm" }}</a>{{ end }}
 </html>
 {{ end }}
 
@@ -48,7 +52,7 @@
             {{ range .images }}
                 <div class="col-sm hover-overlay" data-mdb-ripple-init data-mdb-ripple-color="light">
                     <div class="col-auto">
-                        <div class="row position-relative shadow-lg p-3 m-3 rounded justify-content-center"
+                        <div class="row position-relative shadow-lg p-3 m-3 rounded justify-content-center media-card"
                             style="width: 80vh; max-width: 95%; background-color: rgb(22, 22, 22);">
                                 {{ template "centered_image" . }}
                         </div>

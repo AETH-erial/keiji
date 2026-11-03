@@ -63,31 +63,35 @@
                                 <div class="image-select">
                                     <!-- visible dropdown button -->
                                     <div class="selected" onclick="toggleDropdown(this)">
-                                        <span>Select an image</span>
+                                        <span>Select media</span>
                                     </div>
 
                                     <!-- dropdown list -->
                                     <div class="options">
-                                        {{ range .ImageIds }}
-                                        <div class="option" onclick="chooseImage(this, '{{ . }}')">
-                                            <img src="/api/v1/images/{{ . }}">
-                                            <span>{{ . }}</span>
+                                        {{ range .Images }}
+                                        <div class="option" data-id="{{ .Ident }}" onclick="chooseImage(this)">
+                                            {{ if eq .MediaType "video/webm" }}
+                                            <video src="/api/v1/images/{{ .Ident }}" muted preload="metadata" aria-label="{{ .Title }}"></video>
+                                            {{ else }}
+                                            <img src="/api/v1/images/{{ .Ident }}" alt="{{ .Title }}" loading="lazy">
+                                            {{ end }}
+                                            <span>{{ .Ident }}</span>
                                         </div>
                                         {{ end }}
                                     </div>
 
                                     <!-- REAL select for form submission -->
                                     <select name="imageId" class="real-select" id="imageSelect">
-                                        <option value="">Select an image</option>
-                                        {{ range .ImageIds }}
-                                        <option value="{{ . }}">{{ . }}</option>
+                                        <option value="">Select media</option>
+                                        {{ range .Images }}
+                                        <option value="{{ .Ident }}" data-media-type="{{ .MediaType }}">{{ .Ident }}</option>
                                         {{ end }}
                                     </select>
                                 </div>
                                 <button
                                     type="button"
                                     hx-on:click="insertSelectedImage()">
-                                    Insert Image
+                                    Insert Media
                                 </button>
                             </div>
                             <div class="row"

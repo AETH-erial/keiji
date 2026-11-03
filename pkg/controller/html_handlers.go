@@ -2,6 +2,7 @@ package controller
 
 import (
 	"html/template"
+	"log"
 	"math/rand"
 	"net/http"
 
@@ -29,6 +30,39 @@ func MdToHTML(md []byte) []byte {
 	return markdown.Render(doc, renderer)
 }
 
+// These helpers retain compatibility with older DocumentIO implementations while
+// allowing repositories that implement DocumentListReader to report failures.
+func (c *Controller) htmlDocuments(category string) ([]storage.Document, error) {
+	if reader, ok := c.database.(storage.DocumentListReader); ok {
+		return reader.GetByCategoryWithError(category)
+	}
+	return c.database.GetByCategory(category), nil
+}
+
+func (c *Controller) htmlImages(category string) ([]storage.Image, error) {
+	if reader, ok := c.database.(storage.DocumentListReader); ok {
+		return reader.GetImagesByCategoryWithError(category)
+	}
+	return c.database.GetImagesByCategory(category), nil
+}
+
+func (c *Controller) htmlNavigation() ([]storage.NavBarItem, []storage.LinkPair, error) {
+	if reader, ok := c.database.(storage.DocumentListReader); ok {
+		headers, err := reader.GetNavBarLinksWithError()
+		if err != nil {
+			return nil, nil, err
+		}
+		menu, err := reader.GetDropdownElementsWithError()
+		return headers, menu, err
+	}
+	return c.database.GetNavBarLinks(), c.database.GetDropdownElements(), nil
+}
+
+func htmlListError(ctx *gin.Context, err error) {
+	log.Printf("list query failed: %v", err)
+	ctx.JSON(http.StatusInternalServerError, gin.H{"Error": "Could not load content"})
+}
+
 // @Name ServePost
 // @Summary serves HTML files out of the HTML directory
 // @Tags webpages
@@ -52,15 +86,20 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 		ctx.Status(404)
 		return
 	}
+	headers, menu, err := c.htmlNavigation()
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
 	ctx.HTML(http.StatusOK, "blogpost", gin.H{
 		"navigation": gin.H{
-			"headers": c.database.GetNavBarLinks(),
+			"headers": headers,
 		},
 		"Title":   doc.Title,
 		"Ident":   doc.Ident,
 		"Created": doc.Created,
 		"Body":    template.HTML(MdToHTML([]byte(doc.Body))),
-		"menu":    c.database.GetDropdownElements(),
+		"menu":    menu,
 	})
 
 }
@@ -70,7 +109,16 @@ func (c *Controller) ServePost(ctx *gin.Context) {
 // @Tags webpages
 // @Router / [get]
 func (c *Controller) ServeHome(ctx *gin.Context) {
-	home := c.database.GetByCategory(storage.HOMEPAGE)
+	home, err := c.htmlDocuments(storage.HOMEPAGE)
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
+	headers, menu, err := c.htmlNavigation()
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
 	var content storage.Document
 	if len(home) == 0 {
 		content = storage.Document{
@@ -82,9 +130,9 @@ func (c *Controller) ServeHome(ctx *gin.Context) {
 	}
 	ctx.HTML(http.StatusOK, "home", gin.H{
 		"navigation": gin.H{
-			"headers": c.database.GetNavBarLinks(),
+			"headers": headers,
 		},
-		"menu":    c.database.GetDropdownElements(),
+		"menu":    menu,
 		"default": content,
 	})
 }
@@ -94,7 +142,12 @@ func (c *Controller) ServeHome(ctx *gin.Context) {
 // @Tags webpages
 // @Router /blog [get]
 func (c *Controller) ServeBlog(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(storage.BLOG))
+	docs, err := c.htmlDocuments(storage.BLOG)
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
+	ctx.HTML(http.StatusOK, "writing", docs)
 }
 
 // @Name ServeCreative
@@ -102,7 +155,12 @@ func (c *Controller) ServeBlog(ctx *gin.Context) {
 // @Tags webpages
 // @Router /creative [get]
 func (c *Controller) ServeCreative(ctx *gin.Context) {
-	ctx.HTML(http.StatusOK, "writing", c.database.GetByCategory(storage.CREATIVE))
+	docs, err := c.htmlDocuments(storage.CREATIVE)
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
+	ctx.HTML(http.StatusOK, "writing", docs)
 }
 
 // @Name ServeDigitalArt
@@ -110,12 +168,21 @@ func (c *Controller) ServeCreative(ctx *gin.Context) {
 // @Tags webpages
 // @Router /digital [get]
 func (c *Controller) ServeDigitalArt(ctx *gin.Context) {
-	images := c.database.GetImagesByCategory(storage.DIGITAL_ART)
+	images, err := c.htmlImages(storage.DIGITAL_ART)
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
+	headers, menu, err := c.htmlNavigation()
+	if err != nil {
+		htmlListError(ctx, err)
+		return
+	}
 	ctx.HTML(http.StatusOK, "digital_art", gin.H{
 		"navigation": gin.H{
-			"headers": c.database.GetNavBarLinks(),
+			"headers": headers,
 		},
 		"images": images,
-		"menu":   c.database.GetDropdownElements(),
+		"menu":   menu,
 	})
 }

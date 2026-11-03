@@ -367,6 +367,9 @@ func TestGetAllImages(t *testing.T) {
 			testDb.imageIO.Put(tc.seed[i].Data, tc.seed[i].Ident)
 		}
 		got := testDb.GetAllImages()
+		for i := range tc.seed {
+			tc.seed[i].Data = nil
+		}
 		assert.Equal(t, tc.seed, got)
 	}
 
@@ -533,7 +536,7 @@ func TestAddImage(t *testing.T) {
 			category: "homepage",
 		},
 	} {
-		id, err := testDb.AddImage(tc.data, tc.title, tc.desc, tc.category)
+		id, err := testDb.AddImage(tc.data, tc.title, tc.desc, tc.category, "image/jpeg")
 		if err != nil {
 			assert.Equal(t, tc.err, err)
 		} else {
@@ -793,4 +796,73 @@ func TestGetImageStore(t *testing.T) {
 func TestNewIdentifier(t *testing.T) {
 
 	// testDb, db := newTestDb(t.TempDir(), true)
+}
+
+func TestImageMediaTypeRoundTrip(t *testing.T) {
+	repo, db := newTestDb(t.TempDir(), true)
+	defer db.Close()
+
+	id, err := repo.AddImage([]byte("image bytes"), "title", "description", DIGITAL_ART, "image/webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := repo.GetImage(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "image/webp", image.MediaType)
+	assert.Equal(t, []byte("image bytes"), image.Data)
+	image.Data = nil
+	assert.Equal(t, []Image{image}, repo.GetAllImages())
+	assert.Equal(t, []Image{image}, repo.GetImagesByCategory(DIGITAL_ART))
+	assert.Empty(t, repo.GetImagesByCategory(MISC_ASSET))
+}
+
+func TestLegacyImagesMigration(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	repo := NewSQLiteRepo(db, FilesystemImageIO{RootDir: t.TempDir()})
+	// An extra column and a different physical order simulate an older database.
+	_, err = db.Exec(`CREATE TABLE images (
+		row INTEGER PRIMARY KEY AUTOINCREMENT,
+		id TEXT NOT NULL, legacy_extra TEXT, category TEXT NOT NULL,
+		title TEXT NOT NULL, desc TEXT NOT NULL, created TEXT NOT NULL
+	)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`INSERT INTO images (id, legacy_extra, category, title, desc, created)
+		VALUES ('old', 'unused', 'digital_art', 'old title', 'old desc', 'yesterday')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.imageIO.Put([]byte("old bytes"), "old"); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := repo.Migrate(RequiredTables); err != nil {
+			t.Fatal(err)
+		}
+	}
+	old, err := repo.GetImage("old")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, Image{Ident: "old", Title: "old title", Desc: "old desc", Created: "yesterday", Category: DIGITAL_ART, Data: []byte("old bytes")}, old)
+	id, err := repo.AddImage([]byte("new bytes"), "new title", "new desc", DIGITAL_ART, "image/png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newImage, err := repo.GetImage(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "image/png", newImage.MediaType)
+	old.Data = nil
+	newImage.Data = nil
+	assert.Equal(t, []Image{old, newImage}, repo.GetAllImages())
+	assert.Equal(t, []Image{old, newImage}, repo.GetImagesByCategory(DIGITAL_ART))
 }

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -104,14 +105,15 @@ func (d *Document) MakeSample() string {
 }
 
 type Image struct {
-	Ident    Identifier `json:"identifier"`
-	Location string
-	Title    string                `json:"title" form:"title"`
-	File     *multipart.FileHeader `form:"file"`
-	Desc     string                `json:"description" form:"description"`
-	Created  string
-	Category string `json:"category" form:"category"`
-	Data     []byte
+	Ident     Identifier `json:"identifier"`
+	Location  string
+	Title     string                `json:"title" form:"title"`
+	File      *multipart.FileHeader `form:"file"`
+	Desc      string                `json:"description" form:"description"`
+	Created   string
+	Category  string `json:"category" form:"category"`
+	MediaType string `json:"media_type"`
+	Data      []byte
 }
 
 type DocumentIO interface {
@@ -121,9 +123,11 @@ type DocumentIO interface {
 	GetImagesByCategory(category string) []Image
 	UpdateDocument(doc Document) error
 	DeleteDocument(id Identifier) error
+	UpdateDigitalArt(id Identifier, title, desc string) error
+	ArchiveDigitalArt(id Identifier) error
 	DeleteNavbarItem(id Identifier) error
 	AddDocument(doc Document) (Identifier, error)
-	AddImage(data []byte, title, desc, category string) (Identifier, error)
+	AddImage(data []byte, title, desc, category, mediaType string) (Identifier, error)
 	AddAsset(name string, data []byte) error
 	AddAdminTableEntry(TableData, string) error
 	AddNavbarItem(NavBarItem) error
@@ -134,6 +138,19 @@ type DocumentIO interface {
 	GetNavBarLinks() []NavBarItem
 	GetAssets() []Asset
 	GetAdminTables() AdminPage
+}
+
+// DocumentListReader provides list operations that distinguish database failures
+// from empty results. Request handlers should prefer these methods.
+type DocumentListReader interface {
+	GetDropdownElementsWithError() ([]LinkPair, error)
+	GetNavBarLinksWithError() ([]NavBarItem, error)
+	GetAssetsWithError() ([]Asset, error)
+	GetAdminTablesWithError() (AdminPage, error)
+	GetByCategoryWithError(string) ([]Document, error)
+	AllDocumentsWithError() ([]Document, error)
+	GetAllImagesWithError() ([]Image, error)
+	GetImagesByCategoryWithError(string) ([]Image, error)
 }
 
 var (
@@ -151,6 +168,18 @@ type SQLiteRepo struct {
 type ImageIO interface {
 	Put([]byte, Identifier) error
 	Get(Identifier) ([]byte, error)
+}
+
+// ReadSeekCloser is a seekable media stream that must be closed by its caller.
+type ReadSeekCloser interface {
+	io.Reader
+	io.Seeker
+	io.Closer
+}
+
+// ImageOpener is an optional streaming extension to ImageIO.
+type ImageOpener interface {
+	Open(Identifier) (ReadSeekCloser, error)
 }
 
 type FilesystemImageIO struct {
@@ -176,7 +205,10 @@ Put a data blob on the filesystem
 	:param b: the
 */
 func (f FilesystemImageIO) Put(b []byte, id Identifier) error {
-	fh, err := os.OpenFile(path.Join(f.RootDir, string(id)), os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err := validateImageIdentifier(id); err != nil {
+		return err
+	}
+	fh, err := os.OpenFile(path.Join(f.RootDir, string(id)), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -194,15 +226,32 @@ Get a data blob from the filesystem
 	:param id: the identifier of the image to retrieve
 */
 func (f FilesystemImageIO) Get(id Identifier) ([]byte, error) {
-	fh, err := os.Open(path.Join(f.RootDir, string(id)))
+	fh, err := f.Open(id)
 	if err != nil {
 		return nil, err
 	}
+	defer fh.Close()
 	b, err := io.ReadAll(fh)
 	if err != nil {
 		return nil, err
 	}
 	return b, nil
+}
+
+// Open opens a filesystem image without reading it into memory.
+func (f FilesystemImageIO) Open(id Identifier) (ReadSeekCloser, error) {
+	if err := validateImageIdentifier(id); err != nil {
+		return nil, err
+	}
+	return os.Open(path.Join(f.RootDir, string(id)))
+}
+
+func validateImageIdentifier(id Identifier) error {
+	name := string(id)
+	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\\\x00") {
+		return fmt.Errorf("invalid image identifier %q", name)
+	}
+	return nil
 }
 
 // Instantiate a new SQLiteRepo struct
@@ -222,6 +271,35 @@ func (r *SQLiteRepo) Migrate(seedQueries []string) error {
 			return err
 		}
 	}
+	// CREATE TABLE IF NOT EXISTS does not update an existing images table.
+	// Check by name so migration remains safe to run repeatedly.
+	rows, err := r.db.Query("PRAGMA table_info(images)")
+	if err != nil {
+		return err
+	}
+	var hasImages, hasMediaType bool
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, columnType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			rows.Close()
+			return err
+		}
+		hasImages = true
+		if name == "media_type" {
+			hasMediaType = true
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	if hasImages && !hasMediaType {
+		_, err = r.db.Exec("ALTER TABLE images ADD COLUMN media_type TEXT NOT NULL DEFAULT ''")
+		return err
+	}
 	return nil
 }
 
@@ -229,20 +307,32 @@ func (r *SQLiteRepo) Migrate(seedQueries []string) error {
 Get all dropdown menu elements. Returns a list of LinkPair structs with the text and redirect location
 */
 func (s *SQLiteRepo) GetDropdownElements() []LinkPair {
+	items, err := s.GetDropdownElementsWithError()
+	if err != nil {
+		log.Printf("get dropdown elements: %v", err)
+	}
+	return items
+}
+
+func (s *SQLiteRepo) GetDropdownElementsWithError() ([]LinkPair, error) {
 	rows, err := s.db.Query("SELECT * FROM menu")
-	var menuItems []LinkPair
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
+	var items []LinkPair
 	for rows.Next() {
 		var id int
 		var item LinkPair
-		err = rows.Scan(&id, &item.Link, &item.Text)
-		if err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&id, &item.Link, &item.Text); err != nil {
+			return nil, err
 		}
-		menuItems = append(menuItems, item)
+		items = append(items, item)
 	}
-	return menuItems
-
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 /*
@@ -323,62 +413,91 @@ Get all nav bar items. Returns a list of NavBarItem structs with the png data, t
 Get all nav bar items. Returns a list of NavBarItem structs with the png data, the file name, and the redirect location of the icon
 */
 func (s *SQLiteRepo) GetNavBarLinks() []NavBarItem {
+	items, err := s.GetNavBarLinksWithError()
+	if err != nil {
+		log.Printf("get navbar links: %v", err)
+	}
+	return items
+}
 
+func (s *SQLiteRepo) GetNavBarLinksWithError() ([]NavBarItem, error) {
 	rows, err := s.db.Query("SELECT * FROM navbar")
-	var navbarItems []NavBarItem
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
+	var items []NavBarItem
 	for rows.Next() {
 		var item NavBarItem
 		var id int
-		err = rows.Scan(&id, &item.Png, &item.Link, &item.Redirect)
-		if err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&id, &item.Png, &item.Link, &item.Redirect); err != nil {
+			return nil, err
 		}
-		navbarItems = append(navbarItems, item)
+		items = append(items, item)
 	}
-	return navbarItems
-
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-/*
-get all assets from the asset table
-*/
 func (s *SQLiteRepo) GetAssets() []Asset {
+	items, err := s.GetAssetsWithError()
+	if err != nil {
+		log.Printf("get assets: %v", err)
+	}
+	return items
+}
+
+func (s *SQLiteRepo) GetAssetsWithError() ([]Asset, error) {
 	rows, err := s.db.Query("SELECT * FROM assets")
-	var assets []Asset
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
+	var items []Asset
 	for rows.Next() {
 		var item Asset
 		var id int
-		err = rows.Scan(&id, &item.Name, &item.Data)
-		if err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&id, &item.Name, &item.Data); err != nil {
+			return nil, err
 		}
-		assets = append(assets, item)
+		items = append(items, item)
 	}
-	return assets
-
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-/*
-get all assets from the asset table
-*/
 func (s *SQLiteRepo) GetAdminTables() AdminPage {
+	page, err := s.GetAdminTablesWithError()
+	if err != nil {
+		log.Printf("get admin tables: %v", err)
+	}
+	return page
+}
+
+func (s *SQLiteRepo) GetAdminTablesWithError() (AdminPage, error) {
 	rows, err := s.db.Query("SELECT * FROM admin")
-	adminPage := AdminPage{Tables: map[string][]TableData{}}
+	if err != nil {
+		return AdminPage{}, err
+	}
 	defer rows.Close()
+	page := AdminPage{Tables: map[string][]TableData{}}
 	for rows.Next() {
 		var item TableData
 		var id int
 		var category string
-		err = rows.Scan(&id, &item.DisplayName, &item.Link, &category)
-		if err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&id, &item.DisplayName, &item.Link, &category); err != nil {
+			return AdminPage{}, err
 		}
-		adminPage.Tables[category] = append(adminPage.Tables[category], item)
+		page.Tables[category] = append(page.Tables[category], item)
 	}
-	return adminPage
-
+	if err := rows.Err(); err != nil {
+		return AdminPage{}, err
+	}
+	return page, nil
 }
 
 /*
@@ -407,26 +526,35 @@ Get all documents by category
 	:param category: the category to retrieve all docs from
 */
 func (s *SQLiteRepo) GetByCategory(category string) []Document {
-	rows, err := s.db.Query("SELECT * FROM posts WHERE category = ?", category)
+	docs, err := s.GetByCategoryWithError(category)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("get documents by category: %v", err)
 	}
-	var docs []Document
+	return docs
+}
+
+func (s *SQLiteRepo) GetByCategoryWithError(category string) ([]Document, error) {
+	return s.listDocuments("SELECT * FROM posts WHERE category = ?", category)
+}
+
+func (s *SQLiteRepo) listDocuments(query string, args ...interface{}) ([]Document, error) {
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
+	var docs []Document
 	for rows.Next() {
 		var doc Document
-		err := rows.Scan(&doc.Row, &doc.Ident, &doc.Title, &doc.Created, &doc.Body, &doc.Category, &doc.Sample)
-		if err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&doc.Row, &doc.Ident, &doc.Title, &doc.Created, &doc.Body, &doc.Category, &doc.Sample); err != nil {
+			return nil, err
 		}
 		docs = append(docs, doc)
 	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-	return docs
-
+	return docs, nil
 }
 
 /*
@@ -434,77 +562,104 @@ get image data from the images table
 
 	:param id: the serial identifier of the post
 */
-func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
-	row := s.db.QueryRow("SELECT * FROM images WHERE id = ?", id)
-	var rowNum int
-	var title, desc, created, category string
-	if err := row.Scan(&rowNum, &id, &title, &desc, &created, &category); err != nil {
+func (s *SQLiteRepo) imageMetadata(id Identifier) (Image, error) {
+	if err := validateImageIdentifier(id); err != nil {
+		return Image{}, ErrNotExists
+	}
+	row := s.db.QueryRow("SELECT id, title, desc, created, category, COALESCE(media_type, '') FROM images WHERE id = ?", id)
+	var img Image
+	if err := row.Scan(&img.Ident, &img.Title, &img.Desc, &img.Created, &img.Category, &img.MediaType); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Image{}, ErrNotExists
 		}
 		return Image{}, err
 	}
-	data, err := s.imageIO.Get(id)
+	return img, nil
+}
+
+func (s *SQLiteRepo) GetImage(id Identifier) (Image, error) {
+	img, err := s.imageMetadata(id)
 	if err != nil {
 		return Image{}, err
 	}
-	return Image{Ident: id, Title: title, Desc: desc, Data: data, Created: created, Category: category}, nil
+	img.Data, err = s.imageIO.Get(id)
+	if err != nil {
+		return Image{}, err
+	}
+	return img, nil
+}
+
+type memoryImage struct{ *bytes.Reader }
+
+func (memoryImage) Close() error { return nil }
+
+// OpenImage returns metadata and a seekable stream. Legacy ImageIO implementations
+// remain usable through a buffered fallback; callers must close the stream.
+func (s *SQLiteRepo) OpenImage(id Identifier) (Image, ReadSeekCloser, error) {
+	img, err := s.imageMetadata(id)
+	if err != nil {
+		return Image{}, nil, err
+	}
+	if opener, ok := s.imageIO.(ImageOpener); ok {
+		file, err := opener.Open(id)
+		if err != nil {
+			return Image{}, nil, err
+		}
+		return img, file, nil
+	}
+	data, err := s.imageIO.Get(id)
+	if err != nil {
+		return Image{}, nil, err
+	}
+	return img, memoryImage{bytes.NewReader(data)}, nil
 }
 
 /*
 Get all of the images from the datastore
 */
 func (s *SQLiteRepo) GetAllImages() []Image {
-	rows, err := s.db.Query("SELECT * FROM images")
+	imgs, err := s.GetAllImagesWithError()
 	if err != nil {
-		log.Fatal(err)
-	}
-	imgs := []Image{}
-	for rows.Next() {
-		var img Image
-		var rowNum int
-		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Desc, &img.Created, &img.Category)
-		if err != nil {
-			log.Fatal(err)
-		}
-		b, err := s.imageIO.Get(img.Ident)
-		if err != nil {
-			fmt.Printf("Failed to get image: %+v\nError: %s\n", img, err.Error())
-			continue
-		}
-		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created, Category: img.Category})
-	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
+		log.Printf("get all images: %v", err)
 	}
 	return imgs
 }
 
+func (s *SQLiteRepo) GetAllImagesWithError() ([]Image, error) {
+	return s.listImages("SELECT id, title, desc, created, category, COALESCE(media_type, '') FROM images")
+}
+
 func (s *SQLiteRepo) GetImagesByCategory(category string) []Image {
-	rows, err := s.db.Query("SELECT * FROM images WHERE category = ?", category)
+	imgs, err := s.GetImagesByCategoryWithError(category)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("get images by category: %v", err)
 	}
+	return imgs
+}
+
+func (s *SQLiteRepo) GetImagesByCategoryWithError(category string) ([]Image, error) {
+	return s.listImages("SELECT id, title, desc, created, category, COALESCE(media_type, '') FROM images WHERE category = ?", category)
+}
+
+// listImages deliberately returns metadata only, even if a media file is missing.
+func (s *SQLiteRepo) listImages(query string, args ...interface{}) ([]Image, error) {
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 	imgs := []Image{}
 	for rows.Next() {
 		var img Image
-		var rowNum int
-		err := rows.Scan(&rowNum, &img.Ident, &img.Title, &img.Desc, &img.Created, &img.Category)
-		if err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&img.Ident, &img.Title, &img.Desc, &img.Created, &img.Category, &img.MediaType); err != nil {
+			return nil, err
 		}
-		b, err := s.imageIO.Get(img.Ident)
-		if err != nil {
-			fmt.Printf("Failed to get image: %+v\nError: %s\n", img, err.Error())
-		}
-		imgs = append(imgs, Image{Ident: img.Ident, Title: img.Title, Desc: img.Desc, Data: b, Created: img.Created, Category: img.Category})
+		imgs = append(imgs, img)
 	}
-	err = rows.Err()
-	if err != nil {
-		log.Fatal(err)
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-	return imgs
+	return imgs, nil
 }
 
 /*
@@ -515,17 +670,57 @@ Add an image to the database
 	:param desc: the description of the image, if any
 	:param data: the binary data for the image
 */
-func (s *SQLiteRepo) AddImage(data []byte, title string, desc string, category string) (Identifier, error) {
+func (s *SQLiteRepo) AddImage(data []byte, title, desc, category, mediaType string) (Identifier, error) {
 	id := newIdentifier()
 	err := s.imageIO.Put(data, id)
 	if err != nil {
 		return Identifier(""), err
 	}
-	_, err = s.db.Exec("INSERT INTO images (id, title, desc, created, category) VALUES (?,?,?,?,?)", string(id), title, desc, time.Now().String(), category)
+	_, err = s.db.Exec("INSERT INTO images (id, title, desc, created, category, media_type) VALUES (?,?,?,?,?,?)", string(id), title, desc, time.Now().String(), category, mediaType)
 	if err != nil {
 		return Identifier(""), err
 	}
 	return id, nil
+}
+
+// UpdateDigitalArt changes only the title and description of a digital art
+// record. Other image categories and the image file are never modified.
+func (s *SQLiteRepo) UpdateDigitalArt(id Identifier, title, desc string) error {
+	if err := validateImageIdentifier(id); err != nil {
+		return err
+	}
+	res, err := s.db.Exec("UPDATE images SET title = ?, desc = ? WHERE id = ? AND category = ? AND (SELECT COUNT(*) FROM images WHERE id = ?) = 1", title, desc, id, DIGITAL_ART, id)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrNotExists
+	}
+	return nil
+}
+
+// ArchiveDigitalArt removes an art listing while retaining its media and ID for
+// existing references. Ambiguous IDs are left untouched, regardless of category.
+func (s *SQLiteRepo) ArchiveDigitalArt(id Identifier) error {
+	if err := validateImageIdentifier(id); err != nil {
+		return err
+	}
+	res, err := s.db.Exec("UPDATE images SET category = ? WHERE id = ? AND category = ? AND (SELECT COUNT(*) FROM images WHERE id = ?) = 1", MISC_ASSET, id, DIGITAL_ART, id)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return ErrNotExists
+	}
+	return nil
 }
 
 /*
@@ -742,23 +937,15 @@ func (s *SQLiteRepo) DeleteNavbarItem(id Identifier) error {
 
 // Get all Hosts from the host table
 func (s *SQLiteRepo) AllDocuments() []Document {
-	rows, err := s.db.Query("SELECT * FROM posts")
+	docs, err := s.AllDocumentsWithError()
 	if err != nil {
-		fmt.Printf("There was an issue getting all posts. %s", err.Error())
-		return nil
+		log.Printf("get all documents: %v", err)
 	}
-	defer rows.Close()
+	return docs
+}
 
-	all := []Document{}
-	for rows.Next() {
-		var post Document
-		if err := rows.Scan(&post.Row, &post.Ident, &post.Title, &post.Created, &post.Body, &post.Category, &post.Sample); err != nil {
-			fmt.Printf("There was an error getting all documents. %s", err.Error())
-			return nil
-		}
-		all = append(all, post)
-	}
-	return all
+func (s *SQLiteRepo) AllDocumentsWithError() ([]Document, error) {
+	return s.listDocuments("SELECT * FROM posts")
 }
 
 type InvalidSkipArg struct{ Skip int }

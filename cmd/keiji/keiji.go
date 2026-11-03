@@ -80,6 +80,9 @@ func main() {
 	if srcOpt == webpages.FILESYSTEM {
 		e.LoadHTMLGlob(path.Join(os.Getenv("WEB_ROOT"), "html", "*.html"))
 	} else {
+		digitalArtAdmin := webpages.ReadToString(htmlReader, "html/digital_art_admin.html")
+		renderer.AddFromString("digital_art_admin_list", digitalArtAdmin)
+		renderer.AddFromString("digital_art_admin_editor", digitalArtAdmin)
 		for i := range templateNames {
 			name := templateNames[i]
 			renderer.AddFromString(
@@ -89,8 +92,7 @@ func main() {
 		}
 		e.HTMLRender = renderer
 	}
-	dbfile := "sqlite.db"
-	db, err := sql.Open("sqlite3", dbfile)
+	db, err := sql.Open("sqlite3", env.SQLitePath())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -108,9 +110,16 @@ func main() {
 	if err != nil {
 		log.Fatal("Invalid option passed to USE_SSL: ", os.Getenv("USE_SSL"))
 	}
-	if ssl {
-		e.RunTLS(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
-			os.Getenv(env.CHAIN), os.Getenv(env.KEY))
+	if err := runListener(e, ssl, fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")),
+		os.Getenv(env.CHAIN), os.Getenv(env.KEY)); err != nil {
+		log.Fatal("Server listener failed: ", err)
 	}
-	e.Run(fmt.Sprintf("%s:%s", os.Getenv("HOST_ADDR"), os.Getenv("HOST_PORT")))
+}
+
+// runListener starts exactly one listener; TLS failures must never fall back to HTTP.
+func runListener(e *gin.Engine, tls bool, addr, cert, key string) error {
+	if tls {
+		return e.RunTLS(addr, cert, key)
+	}
+	return e.Run(addr)
 }

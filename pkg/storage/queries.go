@@ -18,7 +18,8 @@ const imagesTable = `
 		title TEXT NOT NULL,
 		desc TEXT NOT NULL,
 		created TEXT NOT NULL,
-		category TEXT NOT NULL
+		category TEXT NOT NULL,
+		media_type TEXT NOT NULL DEFAULT ''
 	);
 	`
 const menuItemsTable = `

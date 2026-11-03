@@ -1,0 +1,21 @@
+[Unit]
+Description=Keiji personal website
+After=network.target
+
+[Service]
+Type=simple
+User=keiji
+Group=keiji
+WorkingDirectory=/var/lib/keiji
+ExecStart=/usr/local/bin/keiji -content embed -env /etc/keiji/keiji.env
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/keiji
+
+[Install]
+WantedBy=multi-user.target

@@ -99,7 +99,8 @@
     background: rgb(90, 90, 90);
 }
 
-.image-select .option img {
+.image-select .option img,
+.image-select .option video {
     width: 40px;
     height: 40px;
     object-fit: cover;
@@ -108,4 +109,15 @@
 
 .real-select {
     display: none;
+}
+
+/* The mask receives hover directly, as with images. Avoid native video
+   controls in the gallery: Firefox may paint them above HTML overlays. */
+.hover-overlay .media-card .video-highlight {
+    z-index: 1;
+    pointer-events: auto;
+}
+.hover-overlay .media-card:hover .video-highlight,
+.hover-overlay .media-card:focus-within .video-highlight {
+    opacity: 1;
 }
